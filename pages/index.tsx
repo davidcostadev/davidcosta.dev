@@ -1,3 +1,6 @@
+import React from 'react';
+
 export default function Index() {
-  return <div>Hello world!</div>;
+  const a = 1;
+  return <div>Hello world!{a}</div>;
 }
