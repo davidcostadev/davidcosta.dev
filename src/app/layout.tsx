@@ -1,11 +1,13 @@
 import Link from 'next/link';
+
 import 'assets/global.css';
-import { BackgroundRetro } from 'app/home/BackgroundRetro';
 
 export const metadata = {
   title: 'davidcosta.dev',
   description: "David Costa home's page",
 };
+
+import './prism.css';
 export default function RootLayout({
   // Layouts must accept a children prop.
   // This will be populated with nested layouts or pages
@@ -14,10 +16,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="dark:bg-gray-900">
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <header className="relative">
-          <BackgroundRetro className="w-full h-72 sm:h-80 md:h-96" />
           <div className="absolute top-0 left-0 w-full z-50 px-2 py-4 bg-gray-900 bg-opacity-90">
             <div className="max-w-3xl m-auto flex justify-between items-center">
               <h1 className="text-2xl font-medium ml-2">

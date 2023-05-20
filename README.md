@@ -1,1 +1,32 @@
 # davidcosta.dev
+
+- [] https://davidcosta.com.br/
+- [] https://davidcosta.com.br/en/how-to-use-pm2-for-deploy-nodejs-applications/
+- [] https://davidcosta.com.br/en/i-am-back-again/
+- [] https://davidcosta.com.br/en/my-initial-experience-with-automatized-tests/
+- [] https://davidcosta.com.br/en/my-notes-about-learning-in-public/
+- [] https://davidcosta.com.br/en/using-popper-as-tooltip-typescript-and-styled-component/
+- [] https://davidcosta.com.br/pt-br/
+- [] https://davidcosta.com.br/pt-br/how-to-use-pm2-for-deploy-nodejs-applications/
+- [] https://davidcosta.com.br/pt-br/i-am-back-again/
+- [] https://davidcosta.com.br/pt-br/my-initial-experience-with-automatized-tests/
+- [] https://davidcosta.com.br/pt-br/my-notes-about-learning-in-public/
+- [] https://davidcosta.com.br/pt-br/tags/career/
+- [] https://davidcosta.com.br/pt-br/tags/javascript/
+- [] https://davidcosta.com.br/pt-br/tags/life/
+- [] https://davidcosta.com.br/pt-br/tags/node/
+- [] https://davidcosta.com.br/pt-br/tags/seedling/
+- [] https://davidcosta.com.br/pt-br/tags/styled-components/
+- [] https://davidcosta.com.br/pt-br/tags/tests/
+- [] https://davidcosta.com.br/pt-br/tags/tooltip/
+- [] https://davidcosta.com.br/pt-br/tags/typescript/
+- [] https://davidcosta.com.br/pt-br/using-popper-as-tooltip-typescript-and-styled-component/
+- [] https://davidcosta.com.br/tags/career/
+- [] https://davidcosta.com.br/tags/javascript/
+- [] https://davidcosta.com.br/tags/life/
+- [] https://davidcosta.com.br/tags/node/
+- [] https://davidcosta.com.br/tags/seedling/
+- [] https://davidcosta.com.br/tags/styled-components/
+- [] https://davidcosta.com.br/tags/tests/
+- [] https://davidcosta.com.br/tags/tooltip/
+- [] https://davidcosta.com.br/tags/typescript/

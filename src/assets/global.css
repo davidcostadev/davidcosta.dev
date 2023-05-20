@@ -14,6 +14,10 @@
   @apply text-white;
 }
 
+.dark body {
+  @apply bg-gray-900;
+}
+
 a:not(:where([class~='text-primary'], [class~='text-secondary'])) {
   @apply text-purple-600 underline hover:bg-white hover:text-purple-800 hover:opacity-90 hover:no-underline;
 }
