@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import * as Icon from 'components/icons';
 
 export const LastPosts = () => {
@@ -12,7 +14,9 @@ export const LastPosts = () => {
             key={post.id}
             className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:py-6 sm:px-10"
           >
-            <h4 className="text-primary text-lg font-medium mb-2">{post.title}</h4>
+            <h4 className="text-primary text-lg font-medium mb-2">
+              <Link href={post.href}>{post.title}</Link>
+            </h4>
             <p className="text-secondary text-sm mb-2">{post.shortDescription}</p>
             <div className="flex flex-wrap gap-2">
               {post.tags.map((tag) => (
@@ -42,6 +46,7 @@ const posts = [
     shortDescription: 'A tutorial of how to easy use pm2 to deploy your applications',
     tags: ['seedling', 'javascript', 'node'],
     createdAt: '2020-08-14',
+    href: '/articles/en/how-to-use-pm2-for-deploy-nodejs-applications',
   },
   {
     id: 2,
@@ -50,6 +55,7 @@ const posts = [
       'Some notes about what I understand about learning in public and why it’s important',
     tags: ['career', 'digital garden'],
     createdAt: '2020-08-03',
+    href: '/articles/en/my-notes-about-learning-in-public',
   },
   {
     id: 3,
@@ -58,5 +64,6 @@ const posts = [
       'In this article I talk a little about my journey of doing a tooltip with popper.',
     tags: ['javascript', 'typescript', 'tooltip', 'styled-components'],
     createdAt: '2020-07-29',
+    href: '/articles/en/using-popper-as-tooltip-typeScript-and-styled-component',
   },
 ];

@@ -27,9 +27,12 @@ export default function RootLayout({
                 </Link>
               </h1>
               <nav>
-                <ul className="flex">
+                {/* <ul className="flex">
                   <li className="text-lg font-medium">
-                    <Link href="/blog" className="text-secondary hover:text-purple-400 px-3 py-2">
+                    <Link
+                      href="/articles"
+                      className="text-secondary hover:text-purple-400 px-3 py-2"
+                    >
                       Blog
                     </Link>
                   </li>
@@ -41,7 +44,7 @@ export default function RootLayout({
                       Projects
                     </Link>
                   </li>
-                </ul>
+                </ul> */}
               </nav>
             </div>
           </div>

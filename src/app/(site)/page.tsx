@@ -33,14 +33,13 @@ export default function Index() {
           </p>
 
           <p className="text-primary">
-            This website is intended to concentrate my <Link href="/blog">articles</Link>,{' '}
-            <Link href="/projects">projects</Link> and be a hub to my networks. Make yourself
-            comfortable here!
+            This website is intended to concentrate my articles, projects and be a hub to my
+            networks. Make yourself comfortable here!
           </p>
         </div>
       </div>
       <LastPosts />
-      <LastProjects />
+      {/* <LastProjects /> */}
       <MyNetworks />
     </div>
   );
