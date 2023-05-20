@@ -1,13 +1,13 @@
 import Link from 'next/link';
 
 import 'assets/global.css';
+import 'assets/prism.css';
 
 export const metadata = {
   title: 'davidcosta.dev',
   description: "David Costa home's page",
 };
 
-import './prism.css';
 export default function RootLayout({
   // Layouts must accept a children prop.
   // This will be populated with nested layouts or pages

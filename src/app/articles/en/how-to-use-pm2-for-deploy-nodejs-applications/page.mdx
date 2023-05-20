@@ -89,3 +89,15 @@ module.exports = {
 ```
 
 `pm2 deploy production`
+
+import { ArticleWrapper } from '../../ArticleWrapper';
+
+export const metadata = {
+  title: 'How to use pm2 for deploy nodejs applications',
+  date: '2020-08-14T13:45:10.015Z',
+  lang: 'en',
+  tags: ['Seedling', 'javascript', 'node'],
+  description: 'A tutorial of how to easy use pm2 to deploy your applications',
+};
+
+export default ({ children }) => <ArticleWrapper meta={metadata}>{children}</ArticleWrapper>;
