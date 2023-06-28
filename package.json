@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@mdx-js/loader": "^2.3.0",
-    "@next/mdx": "^13.4.5",
+    "@next/mdx": "^13.4.7",
     "@tailwindcss/typography": "^0.5.9",
     "@types/node": "^18.16.17",
     "@types/react": "18.2.13",
