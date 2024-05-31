@@ -34,7 +34,7 @@ html {
   --sp-syntax-color-string: #032f62;
 }
 
-html.dark .remark-highlight {
+html.dark {
   --sp-colors-accent: #dfd1fa;
   --sp-colors-clickable: #70db94;
   --sp-colors-disabled: #a38dce;
@@ -66,6 +66,9 @@ code:not([class*='language-']) {
   border-radius: 0.3em;
   white-space: normal;
   font-size: 16px;
+}
+.light code:not([class*='language-']) {
+  background-color: var(--sp-colors-surface1);
 }
 a code:not([class*='language-']) {
   color: inherit;

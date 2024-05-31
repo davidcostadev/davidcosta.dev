@@ -29,7 +29,7 @@ export const Navbar = () => {
         'bg-white dark:bg-gray-900 bg-opacity-90',
         'transition-shadow duration-300',
         {
-          'shadow-md border-b border-gray-300': isScrolled,
+          'shadow-md border-b border-gray-300 dark:border-white/20': isScrolled,
         }
       )}
     >
@@ -47,11 +47,11 @@ export const Navbar = () => {
                 Blog
               </Link>
             </li>
-            <li className="text-lg font-medium">
+            {/* <li className="text-lg font-medium">
               <Link href="/projects" className="text-secondary hover:text-purple-400 px-3 py-2">
                 Projects
               </Link>
-            </li>
+            </li> */}
           </ul>
         </nav>
       </div>

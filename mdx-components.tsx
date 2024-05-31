@@ -5,7 +5,12 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     // Allows customizing built-in components, e.g. to add styling.
     ...components,
-    p: (props) => <p className="font-body text-xl my-4 font-normal leading-relaxed" {...props} />,
+    p: (props) => (
+      <p
+        className="font-body text-xl my-4 font-normal leading-relaxed whitespace-pre-wrap"
+        {...props}
+      />
+    ),
     h1: (props) => (
       <h1
         className="font-title text-5xl text-primary-light dark:text-primary-dark font-bold leading-tight my-4"

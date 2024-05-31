@@ -18,7 +18,7 @@ export const ArticleHeader = ({ title, date, tags }: FrontMatter) => {
       <h1 className="font-title text-5xl text-primary-light dark:text-primary-dark font-bold leading-tight my-4">
         {title}
       </h1>
-      <p className="text-lg font-body text-primary-light dark:text-primary-dark font-bold my-4">
+      <p className="text-lg font-body text-secondary-light dark:text-secondary-dark font-bold my-4">
         {locatedDate}
       </p>
       {tags && tags?.length > 0 && (
