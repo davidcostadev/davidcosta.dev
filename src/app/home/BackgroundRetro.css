@@ -1,12 +1,40 @@
-/* ............................................................... */
-/* ............................................................... */
+/* Define CSS variables for dark and light modes */
+:root {
+  --retro-bg-color-dark: #0a0e26;
+  --sky-color-dark: #1a237e;
+  --sun-glow-color-dark: #ff4500;
+  --sun-gradient-dark: linear-gradient(#fcdf11, #ff623f, #fe2085 50%);
+  --ground-color-dark: rgb(17 24 39);
+  --retro-lines-color-dark: #a3c;
+
+  --retro-bg-color-light: #87ceeb;
+  --sky-color-light: #f0e68c;
+  --sun-glow-color-light: #ffd700;
+  --sun-gradient-light: linear-gradient(#ffeb3b, #ffeb3b 50%);
+  --ground-color-light: #ffffff;
+  --retro-lines-color-light: #000;
+}
+
+/* body {
+  background-color: var(--retro-bg-color-dark);
+  color: #a3c;
+}
+
+.light body {
+  background-color: var(--retro-bg-color-light);
+} */
+
 /* ............................................................... */
 #retrobg {
   position: relative;
   overflow: hidden;
-  /*height: 100%;*/
-  color: #a3c;
+  /* color: #a3c; */
+  color: var(--retro-lines-color-dark);
   background-color: #000;
+}
+
+.light #retrobg {
+  color: var(--retro-lines-color-light);
 }
 
 /* ............................................................... */
@@ -18,7 +46,10 @@
   top: 0;
   width: 100%;
   height: 55%;
-  background: linear-gradient(#214 75%, #249);
+  background: linear-gradient(var(--retro-bg-color-dark) 75%, var(--sky-color-dark));
+}
+.light #retrobg-sky {
+  background: linear-gradient(var(--retro-bg-color-light) 75%, #3057a4);
 }
 
 /* ............................................................... */
@@ -28,12 +59,17 @@
   margin-bottom: -15%;
 }
 #retrobg-sun {
-  --glow-color: #d44;
+  --glow-color: var(--sun-glow-color-dark);
   padding-top: 100%;
   border-radius: 50%;
-  background-image: linear-gradient(#fcdf11, #ff623f, #fe2085 50%);
+  background-image: var(--sun-gradient-dark);
   box-shadow: 0 0 160px 80px var(--glow-color);
   animation: 2s ease infinite alternate retrobg-sun-glow-anim;
+}
+.light #retrobg-sun {
+  --glow-color: var(--sun-glow-color-light);
+  background-image: var(--sun-gradient-light);
+  box-shadow: 0 0 80px 40px var(--glow-color);
 }
 .retrobg-shutdown #retrobg-sun {
   background-image: linear-gradient(#000, #000 40%);
@@ -161,7 +197,10 @@
   height: 45%;
   bottom: 0;
   border-top: 2px solid #bf578c;
-  background-color: rgb(17 24 39);
+  background-color: var(--ground-color-dark);
+}
+.light #retrobg-ground {
+  background-color: var(--ground-color-light);
 }
 .retrobg-shutdown #retrobg-ground {
   border-color: #000;

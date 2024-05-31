@@ -6,7 +6,7 @@ export const LastProjects = () => {
   return (
     <div className="max-w-3xl m-auto px-2 sm:px-6 mb-7">
       <h3 className="text-secondary text-2xl font-medium my-2 px-3 sm:px-10 sm:mb-4">
-        Here my last <span className="text-primary">projects</span>
+        Here my last <span className="text-primary">projects1</span>
       </h3>
       <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {projects.map((project) => (
@@ -14,7 +14,9 @@ export const LastProjects = () => {
             key={project.id}
             className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 sm:last:hidden md:last:block flex flex-col"
           >
-            <h4 className="text-primary text-lg font-medium mb-2">{project.title}</h4>
+            <h4 className="text-link-normal hover:text-link-hover active:text-link-active text-lg font-medium mb-2">
+              {project.title}
+            </h4>
             <Image
               src={project.image}
               alt={project.title}

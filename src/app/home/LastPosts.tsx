@@ -5,7 +5,7 @@ import * as Icon from 'components/icons';
 export const LastPosts = () => {
   return (
     <div className="max-w-3xl m-auto px-2 sm:px-6 mb-7">
-      <h3 className="text-secondary text-2xl font-medium my-2 px-3 sm:px-10 sm:mb-4">
+      <h3 className="text-4xl font-bold my-4 px-3 sm:px-10 sm:mb-4">
         Here my last <span className="text-primary">posts</span>
       </h3>
       <ul className="grid grid-cols-1 gap-4">
@@ -14,21 +14,26 @@ export const LastPosts = () => {
             key={post.id}
             className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:py-6 sm:px-10"
           >
-            <h4 className="text-primary text-lg font-medium mb-2">
-              <Link href={post.href}>{post.title}</Link>
+            <h4 className="mb-2">
+              <Link
+                href={post.href}
+                className="text-link-light-normal hover:text-link-light-hover active:text-link-light-active dark:text-link-dark-normal dark:hover:text-link-dark-hover dark:active:text-link-dark-active font-title text-2xl font-bold"
+              >
+                {post.title}
+              </Link>
             </h4>
-            <p className="text-secondary text-sm mb-2">{post.shortDescription}</p>
+            <p className="text-lg font-body my-4">{post.shortDescription}</p>
             <div className="flex flex-wrap gap-2">
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="bg-yellow-500 text-gray-800 rounded-full px-1.5 py-0.5 bg-opacity-70 text-[10px] font-medium"
+                  className="rounded-lg px-3 py-1 text-base m-0 dark:bg-light/50 bg-gray-200"
                 >
                   {tag}
                 </span>
               ))}
             </div>
-            <p className="text-secondary text-xs mt-2 inline-flex items-center">
+            <p className="text-lg mt-2 inline-flex items-center font-body my-4">
               <Icon.IconBxTime />
               <span className="ml-1">{post.createdAt}</span>
             </p>

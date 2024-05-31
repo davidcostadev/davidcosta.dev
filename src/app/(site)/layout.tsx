@@ -7,10 +7,5 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <>
-      <BackgroundRetro className="w-full h-72 sm:h-80 md:h-96" />
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

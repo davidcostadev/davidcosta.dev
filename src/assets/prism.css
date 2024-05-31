@@ -1,7 +1,80 @@
+/* Custom CSS Variables */
+html {
+  /* --sp-colors-accent: #dfd1fa;
+  --sp-colors-clickable: #70db94;
+  --sp-colors-disabled: #a38dce;
+  --sp-colors-error: #ff4d4d;
+  --sp-colors-error-surface: #f14c4c;
+  --sp-colors-surface1: #2c1f47;
+  --sp-colors-surface2: #231839;
+  --sp-syntax-color-plain: #dfd1fa;
+  --sp-syntax-color-comment: #a38dce;
+  --sp-syntax-color-keyword: #70db94;
+  --sp-syntax-color-tag: #ff75ba;
+  --sp-syntax-color-punctuation: #a38dce;
+  --sp-syntax-color-definition: #dfd1fa;
+  --sp-syntax-color-property: #70db94;
+  --sp-syntax-color-static: #5ed5ed;
+  --sp-syntax-color-string: #ff75ba; */
+  --sp-colors-accent: #087ea4;
+  --sp-colors-clickable: #959da5;
+  --sp-colors-disabled: #24292e;
+  --sp-colors-error: #811e18;
+  --sp-colors-error-surface: #ffcdca;
+  --sp-colors-surface1: #e4e7eb;
+  --sp-colors-surface2: #fff;
+  --sp-syntax-color-plain: #24292e;
+  --sp-syntax-color-comment: #6a737d;
+  --sp-syntax-color-keyword: #d73a49;
+  --sp-syntax-color-tag: #22863a;
+  --sp-syntax-color-punctuation: #24292e;
+  --sp-syntax-color-definition: #6f42c1;
+  --sp-syntax-color-property: #005cc5;
+  --sp-syntax-color-static: #032f62;
+  --sp-syntax-color-string: #032f62;
+}
+
+html.dark .remark-highlight {
+  --sp-colors-accent: #dfd1fa;
+  --sp-colors-clickable: #70db94;
+  --sp-colors-disabled: #a38dce;
+  --sp-colors-error: #ff4d4d;
+  --sp-colors-error-surface: #f14c4c;
+  --sp-colors-surface1: #2c1f47;
+  --sp-colors-surface2: #231839;
+  --sp-syntax-color-plain: #dfd1fa;
+  --sp-syntax-color-comment: #a38dce;
+  --sp-syntax-color-keyword: #70db94;
+  --sp-syntax-color-tag: #ff75ba;
+  --sp-syntax-color-punctuation: #a38dce;
+  --sp-syntax-color-definition: #dfd1fa;
+  --sp-syntax-color-property: #70db94;
+  --sp-syntax-color-static: #5ed5ed;
+  --sp-syntax-color-string: #ff75ba;
+}
+
+/* Remark Highlight Custom Styling */
+.remark-highlight {
+  /* background-color: #2c1f47; */
+  @apply my-8;
+}
+
+code:not([class*='language-']) {
+  background-color: var(--sp-colors-surface1);
+  color: var(--sp-syntax-color-plain);
+  padding: 0.1em 0.3em;
+  border-radius: 0.3em;
+  white-space: normal;
+  font-size: 16px;
+}
+a code:not([class*='language-']) {
+  color: inherit;
+}
+
 code[class*='language-'],
 pre[class*='language-'] {
-  color: #dfd1fa;
-  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  color: var(--sp-syntax-color-plain);
+  @apply font-code;
   text-align: left;
   white-space: pre;
   word-spacing: normal;
@@ -15,6 +88,7 @@ pre[class*='language-'] {
   -moz-hyphens: none;
   -ms-hyphens: none;
   hyphens: none;
+  font-size: 16px;
 }
 pre[class*='language-']::-moz-selection,
 pre[class*='language-'] ::-moz-selection,
@@ -41,7 +115,7 @@ code[class*='language-'],
 pre[class*='language-'] {
   background: 0 0;
   text-shadow: 0 1px rgba(0, 0, 0, 0.3);
-  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  @apply font-code;
   text-align: left;
   white-space: pre;
   word-spacing: normal;
@@ -56,29 +130,40 @@ pre[class*='language-'] {
   -ms-hyphens: none;
   hyphens: none;
 }
+.light code[class*='language-'],
+.light pre[class*='language-'] {
+  text-shadow: none;
+}
 pre[class*='language-'] {
-  padding: 1em;
+  padding: 1.25rem;
   margin: 0.5em 0;
   overflow: auto;
-  border-radius: 0.3em;
+  @apply rounded-2xl;
 }
+.light pre[class*='language-'] {
+  @apply shadow-lg;
+}
+
 :not(pre) > code[class*='language-'],
 pre[class*='language-'] {
-  background: #282a36;
+  background: var(--sp-colors-surface2);
 }
 :not(pre) > code[class*='language-'] {
   padding: 0.1em;
-  border-radius: 0.3em;
   white-space: normal;
+  @apply rounded-2xl;
+}
+.light :not(pre) > code[class*='language-'] {
+  @apply shadow-lg;
 }
 .token.cdata,
 .token.comment,
 .token.doctype,
 .token.prolog {
-  color: #6272a4;
+  color: var(--sp-syntax-color-comment);
 }
 .token.punctuation {
-  color: #f8f8f2;
+  color: var(--sp-syntax-color-punctuation);
 }
 .namespace {
   opacity: 0.7;
@@ -88,11 +173,11 @@ pre[class*='language-'] {
 .token.property,
 .token.symbol,
 .token.tag {
-  color: #ff79c6;
+  color: var(--sp-syntax-color-tag);
 }
 .token.boolean,
 .token.number {
-  color: #bd93f9;
+  color: var(--sp-syntax-color-static);
 }
 .token.attr-name,
 .token.builtin,
@@ -100,7 +185,7 @@ pre[class*='language-'] {
 .token.inserted,
 .token.selector,
 .token.string {
-  color: #50fa7b;
+  color: var(--sp-syntax-color-string);
 }
 .language-css .token.string,
 .style .token.string,
@@ -108,20 +193,20 @@ pre[class*='language-'] {
 .token.operator,
 .token.url,
 .token.variable {
-  color: #f8f8f2;
+  color: var(--sp-syntax-color-plain);
 }
 .token.atrule,
 .token.attr-value,
 .token.class-name,
 .token.function {
-  color: #f1fa8c;
+  color: var(--sp-syntax-color-definition);
 }
 .token.keyword {
-  color: #8be9fd;
+  color: var(--sp-syntax-color-keyword);
 }
 .token.important,
 .token.regex {
-  color: #ffb86c;
+  color: var(--sp-syntax-color-tag);
 }
 .token.bold,
 .token.important {
@@ -135,15 +220,16 @@ pre[class*='language-'] {
 }
 
 pre[class*='language-'] {
-  padding: 1em;
+  padding: 1.25rem;
   margin: 0.5em 0;
   overflow: auto;
 }
 :not(pre) > code[class*='language-'],
 pre[class*='language-'] {
   color: white;
-  background: var(--tw-prose-pre-bg);
+  background: var(--sp-colors-surface2);
 }
+
 :not(pre) > code[class*='language-'] {
   padding: 0.1em;
   border-radius: 0.3em;
