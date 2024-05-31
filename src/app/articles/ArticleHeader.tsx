@@ -22,11 +22,11 @@ export const ArticleHeader = ({ title, date, tags }: FrontMatter) => {
         {locatedDate}
       </p>
       {tags && tags?.length > 0 && (
-        <ul className="no-prose inline-flex list-none p-0 capitalize space-x-2 my-4">
+        <ul className="no-prose inline-flex list-none p-0 capitalize flex-wrap">
           {tags.map((tag) => (
             <li
               key={tag}
-              className="rounded-lg px-3 py-1 text-base m-0 dark:bg-white/10 bg-gray-200"
+              className="rounded-lg px-3 py-1 text-base m-0 dark:bg-white/10 bg-gray-200 mr-4 mb-2"
             >
               {tag}
             </li>

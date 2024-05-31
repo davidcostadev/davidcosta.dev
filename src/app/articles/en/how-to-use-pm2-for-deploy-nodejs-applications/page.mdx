@@ -1,24 +1,61 @@
-`npm install --save-dev pm2 dotenv`
+Deploying Node.js applications can be streamlined and made more efficient with PM2, a popular process manager. This guide will walk you through the steps of setting up and deploying a Node.js application using PM2, ensuring that you understand the context and rationale behind each action.
 
-`npm install —global pm2`
+### Step 1: Install PM2 and dotenv
 
-`pm2 deploy production setup`
+First, install PM2 and dotenv as development dependencies to manage your application processes and environment variables.
 
-Configure the envs _for your server_ `.env`
-
-`cd /home/username/www/example.com/source`
-
-`cp .env.example .env`
-
-`vi .env` or `node .env`
-
-**.gitignore**
-
+```bash
+npm install --save-dev pm2 dotenv
 ```
+
+Next, install PM2 globally to make it accessible from anywhere on your system.
+
+```bash
+npm install —global pm2
+```
+
+---
+
+### Step 2: Setup PM2 Deployment Configuration
+
+PM2 offers a deployment system that allows you to deploy your application to remote servers. To set up the deployment configuration for your production environment, run:
+
+```bash
+pm2 deploy production setup
+```
+
+This command creates a default configuration that you can customize for your specific needs.
+
+---
+
+### Step 3: Configure Environment Variables
+
+Environment variables are crucial for managing configuration settings across different environments (development, production, etc.). Create and configure a `.env` file for your server:
+
+Navigate to your project directory and copy the example environment file to create your own:
+
+```bash
+cd /home/username/www/example.com/source
+cp .env.example .env
+```
+
+Edit the `.env` file to set your specific environment variables. You can use `vi`, `nano`, or any other text editor:
+
+```bash
+vi .env
+```
+
+Ensure that your `.env` file is added to `.gitignore` to avoid committing sensitive information to version control:
+
+```plaintext
 .env
 ```
 
-**.env.example**
+---
+
+### Step 4: Create .env.example
+
+An `.env.example` file provides a template of the necessary environment variables for other developers or for setting up new environments. Here’s an example:
 
 ```markdown
 # envs for your local
@@ -33,18 +70,17 @@ DEPLOY_PATH=/home/username/www/example.com
 DATABASE_URL=mysql://user:password@127.0.0.1:3306/database
 ```
 
-**ecosystem.config.js**
+---
+
+### Step 5: Configure PM2 Ecosystem File
+
+The `ecosystem.config.js` file is where you define your application and deployment settings for PM2. This file can be customized to fit your deployment workflow:
 
 ```javascript
 const dotenv = require('dotenv');
-
 dotenv.config();
 
 module.exports = {
-  /**
-   * Application configuration section
-   * http://pm2.keymetrics.io/docs/usage/application-declaration/
-   */
   apps: [
     {
       name: process.env.DEPLOY_NAME,
@@ -58,10 +94,6 @@ module.exports = {
     },
   ],
 
-  /**
-   * Deployment section
-   * http://pm2.keymetrics.io/docs/usage/deployment/
-   */
   deploy: {
     production: {
       user: process.env.DEPLOY_USER,
@@ -71,8 +103,6 @@ module.exports = {
       path: process.env.DEPLOY_PATH,
       'post-deploy': [
         'npm install',
-        // add here the commands that you application needs after install
-        // 'npm run sequelize db:migrate',
         `pm2 reload ecosystem.config.js --env production --name ${process.env.DEPLOY_NAME}`,
       ].join(' && '),
     },
@@ -80,16 +110,30 @@ module.exports = {
 };
 ```
 
-`pm2 deploy production`
+This configuration file defines the application settings under `apps` and the deployment settings under `deploy`. The `post-deploy` section specifies commands to run after deploying, such as installing dependencies and reloading the application.
+
+---
+
+### Step 6: Deploy Your Application
+
+Once everything is set up, you can deploy your application with the following command:
+
+```bash
+pm2 deploy production
+```
+
+This command uses the deployment configuration defined in your `ecosystem.config.js` to deploy your application to the production environment.
+
+---
 
 import { ArticleWrapper } from '../../ArticleWrapper';
 
 export const metadata = {
-  title: 'How to use pm2 for deploy nodejs applications',
+  title: 'How to Use PM2 for Deploying Node.js Applications',
   date: '2020-08-14T13:45:10.015Z',
   lang: 'en',
   tags: ['Seedling', 'javascript', 'node'],
-  description: 'A tutorial of how to easy use pm2 to deploy your applications',
+  description: 'A tutorial on how to easily use PM2 to deploy your Node.js applications',
 };
 
 export default ({ children }) => <ArticleWrapper meta={metadata}>{children}</ArticleWrapper>;
