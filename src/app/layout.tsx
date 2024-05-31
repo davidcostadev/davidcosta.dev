@@ -23,8 +23,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg">
-        <ThemeProvider attribute="class">
+      <body
+        className="antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg"
+        suppressHydrationWarning
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          forcedTheme="dark"
+          enableSystem={false}
+        >
           <Navbar />
           {children}
           <Footer />
