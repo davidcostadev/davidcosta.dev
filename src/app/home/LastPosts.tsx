@@ -12,7 +12,7 @@ export const LastPosts = () => {
         {posts.map((post) => (
           <li
             key={post.id}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:py-6 sm:px-10"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:py-8 sm:px-10"
           >
             <h4 className="mb-2">
               <Link
@@ -27,13 +27,13 @@ export const LastPosts = () => {
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-lg px-3 py-1 text-base m-0 dark:bg-light/50 bg-gray-200"
+                  className="rounded-lg px-3 py-1 text-base m-0 dark:bg-white/10 bg-gray-200"
                 >
                   {tag}
                 </span>
               ))}
             </div>
-            <p className="text-lg mt-2 inline-flex items-center font-body my-4">
+            <p className="text-lg my-2 inline-flex items-center font-body">
               <Icon.IconBxTime />
               <span className="ml-1">{post.createdAt}</span>
             </p>
