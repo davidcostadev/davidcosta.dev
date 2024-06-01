@@ -1,16 +1,11 @@
-import Link from 'next/link';
-import { Suspense } from 'react';
-// import { ThemeProvider } from '../context/ThemeContext';
+import { GoogleTagManager } from '@next/third-parties/google';
+
 import 'assets/global.css';
 import 'assets/prism.css';
-// import ThemeToggle from '../components/ThemeToggle';
 import { ThemeProvider } from 'next-themes';
-// import { ThemesProvider } from '../context/ThemeProviderTheme';
 import { Footer } from '../components/Footer';
 
 import { Navbar } from '../components/Navbar';
-
-import Analytics from 'components/Analytics';
 
 export const metadata = {
   title: 'davidcosta.dev',
@@ -35,10 +30,8 @@ export default function RootLayout({
           {children}
           <Footer />
         </ThemeProvider>
-        <Suspense>
-          <Analytics />
-        </Suspense>
       </body>
+      <GoogleTagManager gtmId="G-K9H9MZSB1Q" />
     </html>
   );
 }
