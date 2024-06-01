@@ -1,4 +1,4 @@
-import { GoogleTagManager } from '@next/third-parties/google';
+import { GoogleAnalytics } from '@next/third-parties/google';
 
 import 'assets/global.css';
 import 'assets/prism.css';
@@ -31,7 +31,7 @@ export default function RootLayout({
           <Footer />
         </ThemeProvider>
       </body>
-      <GoogleTagManager gtmId="G-K9H9MZSB1Q" />
+      <GoogleAnalytics gaId="G-K9H9MZSB1Q" />
     </html>
   );
 }
