@@ -2,6 +2,11 @@ import { LastPosts } from 'app/home/LastPosts';
 import { MyNetworks } from 'app/home/MyNetworks';
 import { BackgroundRetro } from 'app/home/BackgroundRetro';
 
+export const metadata = {
+  title: 'David Costa - Senior Software Engineer',
+  description: 'Creating creating better web experiences.',
+};
+
 export default function Index() {
   return (
     <main>

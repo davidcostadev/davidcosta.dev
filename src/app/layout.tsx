@@ -3,13 +3,15 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import 'assets/global.css';
 import 'assets/prism.css';
 import { ThemeProvider } from 'next-themes';
-import { Footer } from '../components/Footer';
+import { Metadata } from 'next';
 
+import { Footer } from '../components/Footer';
 import { Navbar } from '../components/Navbar';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'davidcosta.dev',
   description: "David Costa home's page",
+  metadataBase: new URL('https://davidcosta.dev'),
 };
 
 export default function RootLayout({
