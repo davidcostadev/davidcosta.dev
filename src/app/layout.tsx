@@ -12,6 +12,12 @@ export const metadata: Metadata = {
   title: 'davidcosta.dev',
   description: "David Costa home's page",
   metadataBase: new URL('https://davidcosta.dev'),
+  robots: {
+    index: true,
+    googleBot: {
+      index: true,
+    },
+  },
 };
 
 export default function RootLayout({
