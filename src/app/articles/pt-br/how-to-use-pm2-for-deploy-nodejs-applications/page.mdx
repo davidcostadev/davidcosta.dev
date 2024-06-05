@@ -1,32 +1,61 @@
----
-title: How to use pm2 for deploy nodejs applications
-date: '2020-08-14T13:45:10.015Z'
-lang: en
-tags: ['Seedling', 'javascript', 'node']
-description: A tutorial of how to easy use pm2 to deploy your applications
----
+Desdobrar aplicações Node.js pode ser simplificado e tornado mais eficiente com o PM2, um gerenciador de processos popular. Este guia o conduzirá pelos passos de configuração e desdobramento de uma aplicação Node.js usando PM2, garantindo que você compreenda o contexto e a razão por trás de cada ação.
 
-`npm install --save-dev pm2 dotenv`
+### Passo 1: Instalar PM2 e dotenv
 
-`npm install —global pm2`
+Primeiro, instale o PM2 e o dotenv como dependências de desenvolvimento para gerenciar seus processos de aplicação e variáveis de ambiente.
 
-`pm2 deploy production setup`
-
-Configure the envs _for your server_ `.env`
-
-`cd /home/username/www/example.com/source`
-
-`cp .env.example .env`
-
-`vi .env` or `node .env`
-
-**.gitignore**
-
+```bash
+npm install --save-dev pm2 dotenv
 ```
+
+Em seguida, instale o PM2 globalmente para torná-lo acessível de qualquer lugar no seu sistema.
+
+```bash
+npm install —global pm2
+```
+
+---
+
+### Passo 2: Configurar o Desdobramento com PM2
+
+O PM2 oferece um sistema de desdobramento que permite desdobrar sua aplicação em servidores remotos. Para configurar a configuração de desdobramento para o ambiente de produção, execute:
+
+```bash
+pm2 deploy production setup
+```
+
+Este comando cria uma configuração padrão que você pode personalizar para suas necessidades específicas.
+
+---
+
+### Passo 3: Configurar Variáveis de Ambiente
+
+As variáveis de ambiente são cruciais para gerenciar configurações em diferentes ambientes (desenvolvimento, produção, etc.). Crie e configure um arquivo `.env` para o seu servidor:
+
+Navegue até o diretório do seu projeto e copie o arquivo de exemplo de ambiente para criar o seu próprio:
+
+```bash
+cd /home/username/www/example.com/source
+cp .env.example .env
+```
+
+Edite o arquivo `.env` para definir suas variáveis de ambiente específicas. Você pode usar `vi`, `nano` ou qualquer outro editor de texto:
+
+```bash
+vi .env
+```
+
+Certifique-se de que seu arquivo `.env` seja adicionado ao `.gitignore` para evitar o compromisso de informações sensíveis no controle de versão:
+
+```plaintext
 .env
 ```
 
-**.env.example**
+---
+
+### Passo 4: Criar .env.example
+
+Um arquivo `.env.example` fornece um modelo das variáveis de ambiente necessárias para outros desenvolvedores ou para configurar novos ambientes. Aqui está um exemplo:
 
 ```markdown
 # envs for your local
@@ -41,18 +70,17 @@ DEPLOY_PATH=/home/username/www/example.com
 DATABASE_URL=mysql://user:password@127.0.0.1:3306/database
 ```
 
-**ecosystem.config.js**
+---
+
+### Passo 5: Configurar Arquivo de Ecossistema do PM2
+
+O arquivo `ecosystem.config.js` é onde você define suas configurações de aplicação e desdobramento para o PM2. Este arquivo pode ser personalizado para se ajustar ao seu fluxo de trabalho de desdobramento:
 
 ```javascript
 const dotenv = require('dotenv');
-
 dotenv.config();
 
 module.exports = {
-  /**
-   * Application configuration section
-   * http://pm2.keymetrics.io/docs/usage/application-declaration/
-   */
   apps: [
     {
       name: process.env.DEPLOY_NAME,
@@ -66,10 +94,6 @@ module.exports = {
     },
   ],
 
-  /**
-   * Deployment section
-   * http://pm2.keymetrics.io/docs/usage/deployment/
-   */
   deploy: {
     production: {
       user: process.env.DEPLOY_USER,
@@ -79,8 +103,6 @@ module.exports = {
       path: process.env.DEPLOY_PATH,
       'post-deploy': [
         'npm install',
-        // add here the commands that you application needs after install
-        // 'npm run sequelize db:migrate',
         `pm2 reload ecosystem.config.js --env production --name ${process.env.DEPLOY_NAME}`,
       ].join(' && '),
     },
@@ -88,16 +110,39 @@ module.exports = {
 };
 ```
 
-`pm2 deploy production`
+Este arquivo de configuração define as configurações da aplicação em `apps` e as configurações de desdobramento em `deploy`. A seção `post-deploy` especifica os comandos a serem executados após o desdobramento, como instalar dependências e recarregar a aplicação.
+
+---
+
+### Passo 6: Desdobrar Sua Aplicação
+
+Uma vez que tudo esteja configurado, você pode desdobrar sua aplicação com o seguinte comando:
+
+```bash
+pm2 deploy production
+```
+
+Este comando usa a configuração de desdobramento definida em seu `ecosystem.config.js` para desdobrar sua aplicação no ambiente de produção.
+
+---
 
 import { ArticleWrapper } from '../../ArticleWrapper';
 
 export const metadata = {
-  title: 'How to use pm2 for deploy nodejs applications',
+  title: 'Como Usar PM2 para Desdobrar Aplicações Node.js',
   date: '2020-08-14T13:45:10.015Z',
-  lang: 'en',
+  lang: 'pt-br',
   tags: ['Seedling', 'javascript', 'node'],
-  description: 'A tutorial of how to easy use pm2 to deploy your applications',
+  description: 'A tutorial on how to easily use PM2 to deploy your Node.js applications',
+  keywords: ['pm2', 'node.js', 'deployment', 'process manager'],
+  authors: {
+    name: 'David Costa',
+  },
+  alternates: {
+    canonical: '/articles/pt-br/how-to-use-pm2-for-deploy-nodejs-applications',
+  },
 };
 
 export default ({ children }) => <ArticleWrapper meta={metadata}>{children}</ArticleWrapper>;
+
+;
