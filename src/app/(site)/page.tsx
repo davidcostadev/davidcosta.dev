@@ -1,10 +1,14 @@
 import { LastPosts } from 'app/home/LastPosts';
 import { MyNetworks } from 'app/home/MyNetworks';
 import { BackgroundRetro } from 'app/home/BackgroundRetro';
+import { Metadata } from 'next';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'David Costa - Senior Software Engineer',
   description: 'Creating creating better web experiences.',
+  alternates: {
+    canonical: 'https://davidcosta.dev',
+  },
 };
 
 export default function Index() {

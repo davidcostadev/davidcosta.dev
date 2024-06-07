@@ -4,6 +4,9 @@ export interface FrontMatter {
   lang: string;
   tags?: string[];
   description: string;
+  alternates: {
+    canonical: string;
+  };
 }
 
 export const ArticleHeader = ({ title, date, tags }: FrontMatter) => {
