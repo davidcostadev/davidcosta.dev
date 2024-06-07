@@ -4,7 +4,7 @@
   --plane-color-dark: #a3c;
 
   --plane-bg-color-light: #ffffff;
-  --plane-color-light: #000000;
+  --plane-color-light: #a3c;
 }
 
 /* ............................................................... */
@@ -28,6 +28,12 @@
     var(--plane-bg-color-light) 25%,
     var(--plane-color-light) 50%,
     var(--plane-color-light) 50%,
+    var(--plane-bg-color-light) 100%
+  );
+  background: linear-gradient(
+    var(--plane-bg-color-light) 25%,
+    #eaa1ff 50%,
+    #eaa1ff 50%,
     var(--plane-bg-color-light) 100%
   );
 }
