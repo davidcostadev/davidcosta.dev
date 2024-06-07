@@ -1,5 +1,7 @@
 import { GoogleAnalytics } from '@next/third-parties/google';
 
+import { Volkhov, Lato, Fira_Code } from 'next/font/google';
+
 import 'assets/global.css';
 import 'assets/prism.css';
 import { ThemeProvider } from 'next-themes';
@@ -7,6 +9,27 @@ import { Metadata } from 'next';
 
 import { Footer } from '../components/Footer';
 import { Navbar } from '../components/Navbar';
+
+const volkhov = Volkhov({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '700'],
+  variable: '--font-volkhov',
+});
+
+const lato = Lato({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '700'],
+  variable: '--font-lato',
+});
+
+const firaCode = Fira_Code({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '700'],
+  variable: '--font-fira-code',
+});
 
 export const metadata: Metadata = {
   title: 'davidcosta.dev',
@@ -30,7 +53,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className="antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg relative"
+        className={`antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg relative ${volkhov.variable} ${lato.variable} ${firaCode.variable}`}
         suppressHydrationWarning
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>

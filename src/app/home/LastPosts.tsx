@@ -3,7 +3,7 @@ import { PostWidget } from 'components/PostWidget';
 export const LastPosts = () => {
   return (
     <div className="max-w-3xl m-auto px-2 sm:px-6 mb-7">
-      <h3 className="text-4xl font-bold my-4 px-3 sm:px-10 sm:mb-4">
+      <h3 className="text-4xl font-bold my-4 px-3 sm:px-10 sm:mb-4 font-title">
         Here my last <span className="text-primary">posts</span>
       </h3>
       <ul className="grid grid-cols-1 gap-4">

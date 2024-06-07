@@ -10,13 +10,17 @@ module.exports = {
         lg: '0px 0.8px 2px rgba(0, 0, 0, 0.032), 0px 2.7px 6.7px rgba(0, 0, 0, 0.048), 0px 12px 30px rgba(0, 0, 0, 0.08)',
       },
       colors: {
+        theme: {
+          dark: colors.purple[400],
+          light: colors.purple[600],
+        },
         background: {
           dark: colors.gray[900],
           light: colors.white,
         },
         primary: {
           dark: colors.gray[100],
-          light: colors.gray[900],
+          light: colors.gray[700],
         },
         secondary: {
           dark: colors.gray[400],
@@ -36,9 +40,9 @@ module.exports = {
         },
       },
       fontFamily: {
-        title: ['Montserrat', 'sans-serif'],
-        body: ['Lato', 'sans-serif'],
-        code: ['Fira Code', 'monospace', 'Inconsolata'],
+        title: ['var(--font-volkhov)'],
+        body: ['var(--font-lato)'],
+        code: ['var(--font-fira-code)'],
       },
       lineHeight: {
         base: '30px',
