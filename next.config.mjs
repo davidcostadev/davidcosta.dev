@@ -7,6 +7,8 @@ import remarkPrism from 'remark-prism';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 
+import createNextIntlPlugin from 'next-intl/plugin';
+const withNextIntl = createNextIntlPlugin();
 const withMDX = mdxfrom({
   // Optionally provide remark and rehype plugins
   extension: /\.mdx?$/,
@@ -45,5 +47,4 @@ const nextConfig = {
   },
 };
 
-export default withMDX(nextConfig);
-// module.exports = withMDX(nextConfig);
+export default withNextIntl(withMDX(nextConfig));

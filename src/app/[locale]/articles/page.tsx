@@ -18,8 +18,8 @@ interface Post {
 
 async function getPosts(): Promise<Post[]> {
   // Retrieve slugs from post routes
-  const slugs = (await readdir('./src/app/articles/en', { withFileTypes: true })).filter((dirent) =>
-    dirent.isDirectory()
+  const slugs = (await readdir('./src/app/[locale]/articles/en', { withFileTypes: true })).filter(
+    (dirent) => dirent.isDirectory()
   );
 
   // Retrieve metadata from MDX files

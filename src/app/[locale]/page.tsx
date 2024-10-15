@@ -1,6 +1,6 @@
-import { LastPosts } from 'app/home/LastPosts';
-import { MyNetworks } from 'app/home/MyNetworks';
-import { BackgroundRetro } from 'app/home/BackgroundRetro';
+import { LastPosts } from 'app/[locale]/home/LastPosts';
+import { MyNetworks } from 'app/[locale]/home/MyNetworks';
+import { BackgroundRetro } from 'app/[locale]/home/BackgroundRetro';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
