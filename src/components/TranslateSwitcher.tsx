@@ -21,14 +21,8 @@ export const TranslateSwitcher = () => {
     };
   }, []);
 
-  if (!pathname || !pathname.includes('articles')) {
-    return null;
-  }
-
   const getLinkPath = (lang: string) => {
-    const pathPieces = pathname.split('/');
-    pathPieces[2] = lang;
-    return pathPieces.join('/');
+    return `/${lang}/${pathname.replace(/^.*(articles(|.*))$/, '$1')}`;
   };
 
   return (

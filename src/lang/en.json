@@ -1,3 +1,29 @@
 {
-  "title": "David"
+  "title": "David Costa",
+  "topbar": {
+    "brand": "David Costa",
+    "brandTitle": "Go to home page",
+    "nav": {
+      "blog": "Blog",
+      "blogTitle": "Go to blog page",
+      "themeTitleDark": "Change to dark mode",
+      "themeTitleLight": "Change to light mode"
+    }
+  },
+  "homepage": {
+    "title": "Hi! I'm David,",
+    "subtitle": "and I'm creating creating better web experiences.",
+    "introduction": "Hello, my name is <strong>David Costa</strong>. I'm a Senior Software Engineer living in Brazil, creating solutions to help support our customers.",
+    "experiences": "I work with <strong>Javascript</strong> and <strong>Typescript</strong>, using <strong>React</strong> as the main framework most of the time.",
+    "goal": "This website is intended to concentrate my articles, projects, and be a hub for my networks.",
+    "lastPosts": "Latest posts",
+
+    "networks": {
+      "title": "Find me on others places"
+    }
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "Welcome to my blog, where I write about my journey as a developer, and share some tips and tricks I've learned along the way."
+  }
 }

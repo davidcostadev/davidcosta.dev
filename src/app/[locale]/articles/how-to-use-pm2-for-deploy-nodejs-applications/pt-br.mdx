@@ -124,16 +124,15 @@ pm2 deploy production
 
 Este comando usa a configuração de desdobramento definida em seu `ecosystem.config.js` para desdobrar sua aplicação no ambiente de produção.
 
----
-
-import { ArticleWrapper } from '../../ArticleWrapper';
+import { ArticleWrapper } from '../ArticleWrapper';
 
 export const metadata = {
   title: 'Como Usar PM2 para Desdobrar Aplicações Node.js',
   date: '2020-08-14T13:45:10.015Z',
   lang: 'pt-br',
   tags: ['Seedling', 'javascript', 'node'],
-  description: 'A tutorial on how to easily use PM2 to deploy your Node.js applications',
+  description:
+    'Um tutorial sobre como usar facilmente o PM2 para implantar seus aplicativos Node.js',
   keywords: ['pm2', 'node.js', 'deployment', 'process manager'],
   authors: {
     name: 'David Costa',
@@ -144,5 +143,3 @@ export const metadata = {
 };
 
 export default ({ children }) => <ArticleWrapper meta={metadata}>{children}</ArticleWrapper>;
-
-;

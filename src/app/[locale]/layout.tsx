@@ -3,7 +3,8 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import { Volkhov, Lato, Fira_Code } from 'next/font/google';
 // import { usePathname } from 'next/navigation';
 
-import { unstable_setRequestLocale } from 'next-intl/server';
+import { unstable_setRequestLocale, getMessages } from 'next-intl/server';
+import { NextIntlClientProvider } from 'next-intl';
 
 import 'assets/global.css';
 import 'assets/prism.css';
@@ -58,10 +59,11 @@ type LayoutProps = {
   params: { locale: string };
 };
 
-export default function RootLayout({ children, params: { locale } }: LayoutProps) {
+export default async function RootLayout({ children, params: { locale } }: LayoutProps) {
   // const pathname = usePathname() ?? '';
   // const lang = pathname.includes('pt-br') ? 'pt-br' : 'en';
   unstable_setRequestLocale(locale);
+  const messages = await getMessages();
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -69,13 +71,15 @@ export default function RootLayout({ children, params: { locale } }: LayoutProps
         className={`antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg relative ${volkhov.variable} ${lato.variable} ${firaCode.variable}`}
         suppressHydrationWarning
       >
-        <LanguageProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-            <Navbar />
-            {children}
-            <Footer />
-          </ThemeProvider>
-        </LanguageProvider>
+        <NextIntlClientProvider messages={messages} locale={locale}>
+          <LanguageProvider>
+            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+              <Navbar />
+              {children}
+              <Footer />
+            </ThemeProvider>
+          </LanguageProvider>
+        </NextIntlClientProvider>
       </body>
       <GoogleAnalytics gaId="G-K9H9MZSB1Q" />
     </html>

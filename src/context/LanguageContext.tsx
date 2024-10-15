@@ -15,7 +15,6 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguage] = useState('en');
 
   useEffect(() => {
-    console.log(pathname);
     const lang = pathname?.split('/')[1];
     setLanguage(lang === 'pt-br' ? 'pt-br' : 'en');
   }, [pathname]);

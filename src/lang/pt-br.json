@@ -1,0 +1,28 @@
+{
+  "title": "Juliana",
+  "topbar": {
+    "brand": "David Costa",
+    "brandTitle": "Ir para página home",
+    "nav": {
+      "blog": "Blog",
+      "blogTitle": "Ir para o página blog",
+      "themeTitleDark": "Mudar o dark mode",
+      "themeTitleLight": "Mudar o light mode"
+    }
+  },
+  "homepage": {
+    "title": "Olá, eu sou David",
+    "subtitle": "e estou criando experiências web melhores.",
+    "introduction": "Olá, meu nome é <strong>David Costa</strong>. Sou um Engenheiro de Software Sênior que vive no Brasil, criando soluções para ajudar a apoiar nossos clientes.",
+    "experiences": "Trabalho com <strong>Javascript</strong> e <strong>Typescript</strong>, usando <strong>React</strong> como o principal framework na maioria das vezes.",
+    "goal": "Este site é destinado a concentrar meus artigos, projetos e ser um hub para minhas redes.",
+    "lastPosts": "Últimos posts",
+    "networks": {
+      "title": "Me encontre em outros lugares"
+    }
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "Bem-vindo ao meu blog, onde escrevo sobre minha jornada como desenvolvedor e compartilho algumas dicas e truques que aprendi ao longo do caminho."
+  }
+}

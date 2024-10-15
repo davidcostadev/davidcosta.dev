@@ -8,10 +8,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+  locale,
+}: {
+  children: React.ReactNode;
+  locale: string;
+}) {
   return (
     <main className="px-5 sm:px-12 max-w-4xl mx-auto min-h-screen">
       <article className="break-words text-primary-light dark:text-primary-dark font-normal">
+        {locale}
         {children}
       </article>
     </main>

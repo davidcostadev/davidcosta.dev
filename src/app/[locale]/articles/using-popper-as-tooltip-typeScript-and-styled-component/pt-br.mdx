@@ -1,16 +1,12 @@
-In this article, I share my journey of creating a customized tooltip using Popper.js in a React application with TypeScript and styled-components.
+Neste artigo, falo um pouco sobre minha jornada de fazer uma dica de ferramenta com popper
 
 ---
 
-### Introduction
+Estava precisando fazer uma customização de um Tooltip, e surgiu a possibilidade de usar o Popper([https://popper.js.org](https://popper.js.org/)). Infelizmente, para mim, era minha primeira vez usando ele com React. Nunca tive a oportunidade de trabalhar com ele.
 
-I needed to create a customized tooltip for a project, and Popper.js ([https://popper.js.org](https://popper.js.org/)) came to mind. However, this was my first time using Popper with React, so I needed to familiarize myself with it.
+Então minha primeira ação, foi claro ir fundo na documentação do dele. Logo de cara ele sugere usar a versão com Hooks, uma versão antiga mostrava como usa-lo usando Render Props. Para mim Hooks é mais que suficiente mesmo. O problema veio quando abri a documentação para ver os exemplos de uso.
 
-### Exploring the Documentation
-
-My first step was to dive into the Popper.js documentation. Right away, it suggested using the hook-based API instead of the older render props API. Since I prefer hooks, this suited me well. The documentation provided a comprehensive example of using hooks, which I found on this page: [https://popper.js.org/react-popper/v2/](https://popper.js.org/react-popper/v2/).
-
-Here’s the basic example provided:
+Particularmente sou mais apegado a exemplos do que a textos destrinchando o código. Nesta página [https://popper.js.org/react-popper/v2/](https://popper.js.org/react-popper/v2/) você vai encontrar um único exemplo de Hooks bem completo ou o mais completo que encontrei na documentação oficial.
 
 ```jsx
 import React, { useState } from 'react';
@@ -39,13 +35,7 @@ const Example = () => {
 };
 ```
 
-### Adding Styled-components and TypeScript
-
-While the basic example was helpful, I needed to integrate styled-components and TypeScript to fully customize the tooltip. During my research, I found a helpful article on Medium that explained how to use `usePopper` with styled-components in React: [https://medium.com/javascript-in-plain-english/usepopper-with-styled-components-for-react-react-popper-2-568284d029bf](https://medium.com/javascript-in-plain-english/usepopper-with-styled-components-for-react-react-popper-2-568284d029bf). The complete code example is available on CodeSandbox: [https://codesandbox.io/s/blue-worker-w9rtu?file=/src/App.js](https://codesandbox.io/s/blue-worker-w9rtu?file=/src/App.js).
-
-### Implementing the Tooltip
-
-Here’s how I implemented the tooltip using `usePopper`, styled-components, and TypeScript:
+Sabendo que a lib tem muito mais a oferecer isso não me satisfez, então foi aqui que comecei a busca de iluminação. Para resolver meu problema completamente eu precisava incluir **styled-components** e **Typescript**.Então foi aqui que encontrei esse artigo: [https://medium.com/javascript-in-plain-english/usepopper-with-styled-components-for-react-react-popper-2-568284d029bf](https://medium.com/javascript-in-plain-english/usepopper-with-styled-components-for-react-react-popper-2-568284d029bf) (_Infelizmente ainda no medium e ainda por cima um post com wall_) Você pode encontrar o outline dele aqui([https://outline.com/sf3jLE](https://outline.com/sf3jLE)). A onde ele mostra e explica de for muito intuitiva como usa-lo e ele ajuda exemplificar alguns porquês. E aqui você vai encontrar o código completo rodando [https://codesandbox.io/s/blue-worker-w9rtu?file=/src/App.js](https://codesandbox.io/s/blue-worker-w9rtu?file=/src/App.js)
 
 ```jsx
 import React, { useState, useRef } from 'react';
@@ -95,7 +85,7 @@ const Dropdown = () => {
   );
 };
 
-// Basic page styling
+// a basic page styling
 const Page = styled.div`
   width: 250%;
   height: 250%;
@@ -154,15 +144,15 @@ const PopperContainer = styled.div`
 `;
 ```
 
-### Handling TypeScript Issues
+Ótimo só precisava incluir algum Typescript nesta mistura. Minha única dificuldade foi entender o porquê a lib precisava de `useState` ao invés de `useRef` no caso do _arrow_, ainda não consegui essa resposta, mas aparentemente é porque em alguns momentos, não é possível determinar o target do _arrow_, por causa do próprio funcionamento do `useRef` que inicialmente é definido com `null` então no primeiro render, não é possível saber a direção que deve apontar. O uso do `useState` melhorar neste sentido. Segundo o que foi referenciado neste comentário: [https://github.com/popperjs/react-popper/issues/354#issuecomment-613937717](https://github.com/popperjs/react-popper/issues/354#issuecomment-613937717)
 
-Initially, I encountered a TypeScript error when setting the ref for the arrow element:
+Para mim é bom o suficiente entretanto, `ref={setArrowRed}` meu Typescript estava reclamando desta sessão
 
 ```jsx
-<div ref={setArrowRef} style={styles.arrow} className="arrow" />
+<div ref={setArrowRed} style={styles.arrow} className="arrow" />
 ```
 
-The error was:
+O erro era:
 
 ```jsx
 Type 'Dispatch<SetStateAction<null>>' is not assignable to type 'string | ((instance: HTMLDivElement | null) => void) | RefObject<HTMLDivElement> | null | undefined'.
@@ -173,36 +163,35 @@ Type 'Dispatch<SetStateAction<null>>' is not assignable to type 'string | ((inst
           Type 'HTMLDivElement' provides no match for the signature '(prevState: null): null'
 ```
 
-To resolve this, I typed the `useState` hook like this:
+A sacada foi tipar o useState assim:
 
 ```diff
-- const [arrowRef, setArrowRef] = useState(null);
-+ const [arrowRef, setArrowRef] = useState<HTMLDivElement | null>(null);
+- const [arrowRef, setArrowRed] = useState(null);
++ const [arrowRef, setArrowRed] = useState<HTMLDivElement | null>(null);
 ```
 
-This resolved the issue, and you can see the complete working example here: [https://codesandbox.io/s/usepopper-styled-components-xblqg?file=/src/components/Tooltip.tsx:317-390](https://codesandbox.io/s/usepopper-styled-components-xblqg?file=/src/components/Tooltip.tsx:317-390).
+Isso resolveu 100% dos meus problemas. Você conseguirá ver o resultado neste codesandbox: [https://codesandbox.io/s/usepopper-styled-components-xblqg?file=/src/components/Tooltip.tsx:317-390](https://codesandbox.io/s/usepopper-styled-components-xblqg?file=/src/components/Tooltip.tsx:317-390)
 
 ---
 
-### Conclusion
-
-Integrating Popper.js with styled-components and TypeScript can enhance the functionality and appearance of your tooltips. This approach provides a robust and flexible way to manage tooltips in a React application. If you found this article helpful or have any suggestions, please feel free to comment or share.
+Se isso lhe ajudou de alguma forma, comente ou compartilhe, caso tenha uma sugestão, não exite em me procurar.
 
 export const metadata = {
-  title: 'Using Popper for Tooltips with TypeScript and Styled-components',
-  description: 'In this article I talk about my journey of creating a tooltip with Popper.js.',
-  lang: 'en',
-  tags: ['javascript', 'typescript', 'tooltip', 'styled-components'],
+  title: 'Usando Popper como Tooltip com TypeScript e styled-component',
   date: '2020-07-29T14:47:04.046Z',
-  keywords: ['popper.js', 'tooltip', 'react', 'typescript', 'styled-components'],
+  lang: 'pt-br',
+  tags: ['javascript', 'typescript', 'tooltip', 'styled-components'],
+  description:
+    'Neste artigo, falo um pouco sobre minha jornada de fazer uma dica de ferramenta com popper',
+  keywords: ['popper', 'tooltip', 'typescript', 'styled-components'],
   authors: {
     name: 'David Costa',
   },
   alternates: {
-    canonical: '/articles/en/using-popper-as-tooltip-typeScript-and-styled-component',
+    canonical: '/articles/pt-br/using-popper-as-tooltip-typeScript-and-styled-component',
   },
 };
 
-import { ArticleWrapper } from '../../ArticleWrapper';
+import { ArticleWrapper } from '../ArticleWrapper';
 
 export default ({ children }) => <ArticleWrapper meta={metadata}>{children}</ArticleWrapper>;
