@@ -1,6 +1,6 @@
 import * as icons from 'components/icons';
 
-import { BackgroundPlane } from 'app/home/BackgroundPlane';
+import { BackgroundPlane } from 'app/[locale]/home/BackgroundPlane';
 export const MyNetworks = () => {
   return (
     <div className="h-80 relative">

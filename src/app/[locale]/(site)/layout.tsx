@@ -1,4 +1,4 @@
-import { BackgroundRetro } from 'app/home/BackgroundRetro';
+import { BackgroundRetro } from 'app/[locale]/home/BackgroundRetro';
 
 export default function RootLayout({
   // Layouts must accept a children prop.

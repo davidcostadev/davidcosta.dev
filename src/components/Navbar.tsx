@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import ThemeSwitcher from '../components/ThemeSwitcher';
+import { TranslateSwitcher } from '../components/TranslateSwitcher';
 import Link from 'next/link';
 import clsx from 'clsx';
 
@@ -41,6 +42,7 @@ export const Navbar = () => {
         </h1>
         <nav className="flex gap-5 items-center">
           <ThemeSwitcher />
+          <TranslateSwitcher />
           <ul className="flex">
             <li className="text-lg font-medium">
               <Link href="/articles" className="text-secondary hover:text-purple-400 px-3 py-2">
