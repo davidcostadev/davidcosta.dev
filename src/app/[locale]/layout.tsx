@@ -11,6 +11,8 @@ import { ThemeProvider } from 'next-themes';
 import { LanguageProvider } from 'context/LanguageContext';
 import { Metadata } from 'next';
 
+import { locales } from 'config';
+
 import { Footer } from 'components/Footer';
 import { Navbar } from 'components/Navbar';
 
@@ -46,6 +48,10 @@ export const metadata: Metadata = {
     },
   },
 };
+
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }));
+}
 
 type LayoutProps = {
   children: React.ReactNode;
