@@ -1,11 +1,13 @@
-import { BackgroundRetro } from 'app/[locale]/home/BackgroundRetro';
+import { unstable_setRequestLocale } from 'next-intl/server';
 
 export default function RootLayout({
-  // Layouts must accept a children prop.
-  // This will be populated with nested layouts or pages
   children,
+  params: { locale },
 }: {
   children: React.ReactNode;
+  params: { locale: string };
 }) {
+  unstable_setRequestLocale(locale);
+
   return <>{children}</>;
 }

@@ -1,8 +1,9 @@
-import { readdir, stat } from 'fs/promises';
+import { readdir } from 'fs/promises';
 import path from 'path';
 import { PostWidget } from 'components/PostWidget';
 import { fileURLToPath } from 'url';
 import { getTranslations } from 'next-intl/server';
+import { unstable_setRequestLocale } from 'next-intl/server';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,7 +22,7 @@ async function getPosts(): Promise<Post[]> {
   const posts: Post[] = [];
 
   for (const locale of locales) {
-    let dirPath = path.join(__dirname);
+    const dirPath = path.join(__dirname);
 
     try {
       const slugs = (await readdir(dirPath, { withFileTypes: true })).filter((dirent) =>
@@ -32,14 +33,15 @@ async function getPosts(): Promise<Post[]> {
         const mdxFilePath = path.join(dirPath, name, `${locale}.mdx`);
         try {
           const { metadata } = await import(`.${mdxFilePath.replace(__dirname, '')}`);
-          posts.push({ slug: name, lang: locale, ...metadata });
+          const postMetadata: Omit<Post, 'slug' | 'lang'> = metadata;
+          posts.push({ slug: name, lang: locale, ...postMetadata });
         } catch (error) {
-          console.error(`Erro ao carregar ${mdxFilePath}:`, error);
+          console.error(`Error on load ${mdxFilePath}:`, error);
           continue;
         }
       }
     } catch (error) {
-      console.error(`Erro ao ler diretório de ${locale}:`, error);
+      console.error(`Error on read direc ${locale}:`, error);
       continue;
     }
   }
@@ -49,7 +51,9 @@ async function getPosts(): Promise<Post[]> {
   return posts;
 }
 
-export default async function Home({ params: { locale } }) {
+export default async function Home({ params: { locale } }: { params: { locale: string } }) {
+  unstable_setRequestLocale(locale);
+
   const t = await getTranslations();
   const posts = await getPosts();
   const postsLocale = posts.filter((post) => post.lang === locale);

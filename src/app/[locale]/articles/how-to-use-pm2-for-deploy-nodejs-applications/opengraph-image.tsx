@@ -21,11 +21,7 @@ export const size = {
 
 export const contentType = 'image/png';
 
-export default async function Image({ params, id }: { params: { id: string }; id: number }) {
-  const productId = params.id;
-  const imageId = id;
-  const text = 'acption';
-
+export default async function Image() {
   return new ImageResponse(
     (
       // ImageResponse JSX element
@@ -63,6 +59,6 @@ export default async function Image({ params, id }: { params: { id: string }; id
       // For convenience, we can re-use the exported opengraph-image
       // size config to also set the ImageResponse's width and height.
       ...size,
-    }
+    },
   );
 }

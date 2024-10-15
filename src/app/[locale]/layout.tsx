@@ -1,7 +1,6 @@
 import { GoogleAnalytics } from '@next/third-parties/google';
 
 import { Volkhov, Lato, Fira_Code } from 'next/font/google';
-// import { usePathname } from 'next/navigation';
 
 import { unstable_setRequestLocale, getMessages } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
@@ -60,10 +59,9 @@ type LayoutProps = {
 };
 
 export default async function RootLayout({ children, params: { locale } }: LayoutProps) {
-  // const pathname = usePathname() ?? '';
-  // const lang = pathname.includes('pt-br') ? 'pt-br' : 'en';
   unstable_setRequestLocale(locale);
-  const messages = await getMessages();
+
+  const messages = await getMessages({ locale });
 
   return (
     <html lang={locale} suppressHydrationWarning>

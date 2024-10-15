@@ -2,7 +2,8 @@ import { LastPosts } from 'app/[locale]/home/LastPosts';
 import { MyNetworks } from 'app/[locale]/home/MyNetworks';
 import { BackgroundRetro } from 'app/[locale]/home/BackgroundRetro';
 import { Metadata } from 'next';
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
+import { unstable_setRequestLocale } from 'next-intl/server';
 
 export const metadata: Metadata = {
   title: 'David Costa - Senior Software Engineer',
@@ -12,8 +13,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Index() {
-  const t = useTranslations();
+export default async function Index({ params: { locale } }: { params: { locale: string } }) {
+  unstable_setRequestLocale(locale);
+
+  const t = await getTranslations();
 
   return (
     <main>

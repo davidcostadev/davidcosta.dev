@@ -5,7 +5,13 @@ const MDXComponents = {
   'pt-br': dynamic(() => import('./pt-br.mdx')),
 };
 
-export default function Page({ params: { locale } }) {
+interface PageProps {
+  params: {
+    locale: string;
+  };
+}
+
+export default function Page({ params: { locale } }: PageProps): JSX.Element {
   const MDXComponent = MDXComponents[locale] || MDXComponents['en']; // Fallback to English if locale not found
 
   return (
