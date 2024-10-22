@@ -22,7 +22,7 @@ export const TranslateSwitcher = () => {
   }, []);
 
   const getLinkPath = (lang: string) => {
-    return `/${lang}/${pathname.replace(/^.*(articles(|.*))$/, '$1')}`;
+    return `/${lang}/${pathname.replace(/^\/(en|pt-br)/, '').replace(/^.*(articles(|.*))$/, '$1')}`;
   };
 
   return (
