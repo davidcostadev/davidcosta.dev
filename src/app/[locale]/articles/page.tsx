@@ -1,62 +1,16 @@
-import { readdir } from 'fs/promises';
-import path from 'path';
 import { PostWidget } from 'components/PostWidget';
-import { fileURLToPath } from 'url';
 import { getTranslations } from 'next-intl/server';
 import { unstable_setRequestLocale } from 'next-intl/server';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-interface Post {
-  slug: string;
-  title: string;
-  date: string;
-  lang: string;
-  tags: string[];
-  description: string;
-}
-
-const locales = ['en', 'pt-br'];
-
-async function getPosts(): Promise<Post[]> {
-  const posts: Post[] = [];
-
-  for (const locale of locales) {
-    const dirPath = path.join(__dirname);
-
-    try {
-      const slugs = (await readdir(dirPath, { withFileTypes: true })).filter((dirent) =>
-        dirent.isDirectory(),
-      );
-
-      for (const { name } of slugs) {
-        const mdxFilePath = path.join(dirPath, name, `${locale}.mdx`);
-        try {
-          const { metadata } = await import(`.${mdxFilePath.replace(__dirname, '')}`);
-          const postMetadata: Omit<Post, 'slug' | 'lang'> = metadata;
-          posts.push({ slug: name, lang: locale, ...postMetadata });
-        } catch (error) {
-          console.error(`Error on load ${mdxFilePath}:`, error);
-          continue;
-        }
-      }
-    } catch (error) {
-      console.error(`Error on read direc ${locale}:`, error);
-      continue;
-    }
-  }
-
-  posts.sort((a, b) => +new Date(b.date) - +new Date(a.date));
-
-  return posts;
-}
+import { getPosts } from './get-posts';
 
 export default async function Home({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
 
   const t = await getTranslations();
-  const posts = await getPosts();
-  const postsLocale = posts.filter((post) => post.lang === locale);
+  const posts = await getPosts({
+    lang: locale,
+  });
   return (
     <main className="flex flex-col">
       <header className="py-6 flex flex-col gap-4">
@@ -70,7 +24,7 @@ export default async function Home({ params: { locale } }: { params: { locale: s
 
       <section className="mb-6">
         <ul className="grid grid-cols-1 gap-4">
-          {postsLocale.map((post) => (
+          {posts.map((post) => (
             <PostWidget post={post} key={post.slug} />
           ))}
         </ul>
