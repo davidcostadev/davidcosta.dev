@@ -45,6 +45,20 @@ const nextConfig = {
   images: {
     domains: ['source.unsplash.com'],
   },
+  async redirects() {
+    return [
+      {
+        source: '/articles/pt-br/:slug',
+        destination: '/pt-br/articles/:slug',
+        permanent: true,
+      },
+      {
+        source: '/articles/en/:slug',
+        destination: '/en/articles/:slug',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(withMDX(nextConfig));
