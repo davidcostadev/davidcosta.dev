@@ -1,0 +1,46 @@
+---
+title: Privacy Policy
+date: '2026-09-21T00:00:00Z'
+lang: en
+description: How the personal Google OAuth client registered by David Costa handles data.
+---
+
+# Privacy Policy
+
+**Last updated:** 21 September 2026
+
+This page describes how the personal Google OAuth client registered by David Costa handles data. It exists because Google requires an OAuth client to publish a privacy policy.
+
+## What this is
+
+It is not a product and not a service offered to anyone. It is a personal OAuth client ID used to authorize [rclone](https://rclone.org), an open source file management tool, to reach the Google Drive of its own owner from his own computers.
+
+There is no website behind it, no account system, and no users other than the owner.
+
+## What is accessed
+
+Once authorized, rclone uses the Google Drive API to read and write files in the Google Drive of the account that granted the authorization — that is, the owner's own account.
+
+## How the data is handled
+
+File contents move directly between Google's API and the local machine running rclone. **There is no intermediate server**, no hosted backend and no third party in the path.
+
+Nothing is collected, stored, transmitted, sold or shared. No other account is authorized to use this client, so there is no other account's data to access.
+
+The OAuth token issued by Google is stored locally in rclone's configuration file on the machine, and never leaves it.
+
+## Google API Services User Data Policy
+
+Use of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
+
+## Retention and removal
+
+Nothing is retained, because nothing is collected. Authorization can be revoked at any time at [Google Account permissions](https://myaccount.google.com/permissions), which immediately invalidates the stored token.
+
+## Changes
+
+If this policy changes, the updated version is published on this page.
+
+## Contact
+
+[github.com/davidcostadev](https://github.com/davidcostadev)

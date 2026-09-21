@@ -1,0 +1,46 @@
+---
+title: Política de Privacidade
+date: '2026-09-21T00:00:00Z'
+lang: pt-br
+description: Como o cliente OAuth pessoal do Google registrado por David Costa lida com dados.
+---
+
+# Política de Privacidade
+
+**Última atualização:** 21 de setembro de 2026
+
+Esta página descreve como o cliente OAuth pessoal do Google registrado por David Costa lida com dados. Ela existe porque o Google exige que um cliente OAuth publique uma política de privacidade.
+
+## O que é isto
+
+Não é um produto nem um serviço oferecido a terceiros. É um Client ID OAuth pessoal, usado para autorizar o [rclone](https://rclone.org), uma ferramenta de código aberto para gerenciamento de arquivos, a acessar o Google Drive do próprio dono, a partir dos computadores dele.
+
+Não há site por trás, não há sistema de contas e não há usuários além do próprio dono.
+
+## O que é acessado
+
+Uma vez autorizado, o rclone usa a API do Google Drive para ler e escrever arquivos no Google Drive da conta que concedeu a autorização — ou seja, a conta do próprio dono.
+
+## Como os dados são tratados
+
+O conteúdo dos arquivos trafega diretamente entre a API do Google e a máquina local que roda o rclone. **Não há servidor intermediário**, nem backend hospedado, nem terceiros no caminho.
+
+Nada é coletado, armazenado, transmitido, vendido ou compartilhado. Nenhuma outra conta está autorizada a usar este cliente, portanto não há dados de outra conta a acessar.
+
+O token OAuth emitido pelo Google fica armazenado localmente no arquivo de configuração do rclone, na máquina, e nunca sai dela.
+
+## Política de Dados de Usuário dos Serviços de API do Google
+
+O uso de informações recebidas das APIs do Google segue a [Política de Dados de Usuário dos Serviços de API do Google](https://developers.google.com/terms/api-services-user-data-policy), incluindo os requisitos de Uso Limitado.
+
+## Retenção e remoção
+
+Nada é retido, porque nada é coletado. A autorização pode ser revogada a qualquer momento em [permissões da Conta Google](https://myaccount.google.com/permissions), o que invalida imediatamente o token armazenado.
+
+## Alterações
+
+Se esta política mudar, a versão atualizada é publicada nesta página.
+
+## Contato
+
+[github.com/davidcostadev](https://github.com/davidcostadev)
