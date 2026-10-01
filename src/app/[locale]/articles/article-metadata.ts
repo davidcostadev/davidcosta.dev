@@ -14,6 +14,7 @@ interface ArticleFrontMatter {
   title: string;
   description: string;
   date: string;
+  updated?: string;
   tags?: string[];
   keywords?: string[];
   draft?: boolean;
@@ -68,6 +69,7 @@ export async function getArticleMetadata(slug: string, locale: string): Promise<
       locale: OPEN_GRAPH_LOCALES[lang],
       alternateLocale: locales.filter((l) => l !== lang).map((l) => OPEN_GRAPH_LOCALES[l]),
       publishedTime: new Date(metadata.date).toISOString(),
+      ...(metadata.updated && { modifiedTime: new Date(metadata.updated).toISOString() }),
       authors: ['David Costa'],
       tags: metadata.tags,
     },

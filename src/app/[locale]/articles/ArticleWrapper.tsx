@@ -26,6 +26,7 @@ export function ArticleWrapper({
       url: SITE_URL,
     },
     datePublished: formattedData,
+    ...(meta.updated && { dateModified: new Date(meta.updated).toISOString().split('T')[0] }),
     description: meta.description,
     inLanguage: meta.lang,
     keywords: meta.tags,

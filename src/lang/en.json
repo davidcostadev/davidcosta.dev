@@ -39,6 +39,7 @@
     "copyFailed": "Couldn't copy, select the text and copy it manually"
   },
   "article": {
+    "updated": "Updated",
     "opensInNewTab": "opens in a new tab"
   }
 }
