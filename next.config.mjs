@@ -1,8 +1,5 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-// const highlight = require('rehype-highlight');
-// import rehypeHighlight from 'rehype-highlight';
 import mdxfrom from '@next/mdx';
-import remarkPrism from 'remark-prism';
+import rehypePrism from 'rehype-prism-plus';
 import remarkGfm from 'remark-gfm';
 
 import remarkFrontmatter from 'remark-frontmatter';
@@ -10,42 +7,30 @@ import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 
 import createNextIntlPlugin from 'next-intl/plugin';
 
-// remark-prism HTML-escapes code blocks without a language into a text node,
-// so React escapes them again and quotes render as &quot;. Render those blocks
-// here, with the same markup remark-prism uses, before it can touch them.
 // A block without a language is command output; ```text marks file contents.
+// Both render unhighlighted, and CodeBlock labels them from the language class.
 const PLAIN_LANGS = { output: 'output', text: 'text', txt: 'text', plain: 'text' };
 
 const remarkPlainCode = () => (tree) => {
   const visit = (node) => {
-    node.children?.forEach((child, index) => {
-      const lang = child.lang ? PLAIN_LANGS[child.lang] : 'output';
-      if (child.type !== 'code' || !lang) return visit(child);
+    if (node.type === 'code') {
+      node.lang = node.lang ? (PLAIN_LANGS[node.lang] ?? node.lang) : 'output';
+    }
+    node.children?.forEach(visit);
+  };
+  visit(tree);
+};
 
-      const className = [`language-${lang}`];
-      node.children[index] = {
-        type: 'plainCode',
-        data: {
-          hName: 'div',
-          hProperties: { className: ['remark-highlight'] },
-          hChildren: [
-            {
-              type: 'element',
-              tagName: 'pre',
-              properties: { className },
-              children: [
-                {
-                  type: 'element',
-                  tagName: 'code',
-                  properties: { className },
-                  children: [{ type: 'text', value: `${child.value}\n` }],
-                },
-              ],
-            },
-          ],
-        },
-      };
-    });
+// rehype-prism-plus only tags <pre> for languages it highlights; CodeBlock reads
+// the language from <pre>, so copy it over from <code> for the plain ones too.
+const rehypePreLanguage = () => (tree) => {
+  const visit = (node) => {
+    const code = node.tagName === 'pre' && node.children?.find((child) => child.tagName === 'code');
+    const lang = code?.properties?.className?.find((name) => name.startsWith('language-'));
+    if (lang && !node.properties.className?.includes(lang)) {
+      node.properties.className = [...(node.properties.className ?? []), lang];
+    }
+    node.children?.forEach(visit);
   };
   visit(tree);
 };
@@ -60,20 +45,8 @@ const withMDX = mdxfrom({
     // https://github.com/remarkjs/remark-gfm#install
     commonmark: true,
     gfm: true,
-    remarkPlugins: [
-      remarkGfm,
-      remarkPlainCode,
-      [
-        remarkPrism,
-        {
-          plugins: ['line-numbers'],
-        },
-      ],
-      remarkFrontmatter,
-      remarkMdxFrontmatter,
-    ],
-    // rehypePlugins: [rehypeHighlight],
-    rehypePlugins: [],
+    remarkPlugins: [remarkGfm, remarkPlainCode, remarkFrontmatter, remarkMdxFrontmatter],
+    rehypePlugins: [[rehypePrism, { ignoreMissing: true }], rehypePreLanguage],
     // If you use `MDXProvider`, uncomment the following line.
     // providerImportSource: '@mdx-js/react',
   },

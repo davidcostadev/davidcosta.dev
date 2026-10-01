@@ -58,10 +58,6 @@ a code:not([class*='language-']) {
 }
 
 /* Code blocks */
-.remark-highlight {
-  @apply my-[1.6rem];
-}
-
 code[class*='language-'],
 pre[class*='language-'] {
   @apply font-code;
@@ -90,7 +86,7 @@ code {
 .code-block {
   background: var(--code-bg);
   border: 1px solid var(--code-border);
-  margin: 0.4em 0;
+  @apply my-[1.6rem];
   @apply rounded-xl;
 }
 
