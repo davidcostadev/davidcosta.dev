@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { unstable_setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
 
 export const metadata: Metadata = {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -9,14 +9,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-  params: { locale },
+  params,
 }: {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  unstable_setRequestLocale(locale);
+  const { locale } = await params;
+  setRequestLocale(locale);
 
   return (
     <main className="px-5 sm:px-12 max-w-4xl mx-auto min-h-screen">

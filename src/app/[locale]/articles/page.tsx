@@ -1,11 +1,12 @@
 import { PostWidget } from 'components/PostWidget';
 import { getTranslations } from 'next-intl/server';
-import { unstable_setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
 
 import { getPosts } from './get-posts';
 
-export default async function Home({ params: { locale } }: { params: { locale: string } }) {
-  unstable_setRequestLocale(locale);
+export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
 
   const t = await getTranslations();
   const posts = await getPosts({

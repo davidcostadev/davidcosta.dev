@@ -3,7 +3,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import { Volkhov, Lato } from 'next/font/google';
 import localFont from 'next/font/local';
 
-import { unstable_setRequestLocale, getMessages } from 'next-intl/server';
+import { setRequestLocale, getMessages } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
 
 import 'assets/global.css';
@@ -76,11 +76,12 @@ export function generateStaticParams() {
 
 type LayoutProps = {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 };
 
-export default async function RootLayout({ children, params: { locale } }: LayoutProps) {
-  unstable_setRequestLocale(locale);
+export default async function RootLayout({ children, params }: LayoutProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
 
   const messages = await getMessages({ locale });
 

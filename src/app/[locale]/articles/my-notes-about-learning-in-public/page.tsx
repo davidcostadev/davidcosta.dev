@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 
-import { getArticleMetadata } from '../article-metadata';
+import { getArticle, getArticleMetadata } from '../article-metadata';
 
 const MDXComponents = {
   en: dynamic(() => import('./en.mdx')),
@@ -9,14 +9,17 @@ const MDXComponents = {
 };
 
 export async function generateMetadata({
-  params: { locale },
+  params,
 }: {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
+  const { locale } = await params;
   return getArticleMetadata('my-notes-about-learning-in-public', locale);
 }
 
-export default function Page({ params: { locale } }) {
+export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  await getArticle('my-notes-about-learning-in-public', locale);
   const MDXComponent = MDXComponents[locale] || MDXComponents['en']; // Fallback to English if locale not found
 
   return (

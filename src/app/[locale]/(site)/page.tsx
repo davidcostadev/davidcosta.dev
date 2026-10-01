@@ -3,7 +3,7 @@ import { MyNetworks } from 'app/[locale]/home/MyNetworks';
 import { BackgroundRetro } from 'app/[locale]/home/BackgroundRetro';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { unstable_setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
 
 export const metadata: Metadata = {
   title: 'David Costa - Senior Software Engineer',
@@ -13,8 +13,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function Index({ params: { locale } }: { params: { locale: string } }) {
-  unstable_setRequestLocale(locale);
+export default async function Index({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
 
   const t = await getTranslations();
 

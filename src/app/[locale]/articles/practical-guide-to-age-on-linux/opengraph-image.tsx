@@ -1,7 +1,5 @@
 import { OG_IMAGE_SIZE, renderArticleOgImage, type ArticleOgContent } from '../article-og-image';
 
-export const runtime = 'edge';
-
 const CONTENT: Record<string, ArticleOgContent> = {
   en: {
     title: 'A practical guide to age on Linux',
@@ -16,12 +14,14 @@ const CONTENT: Record<string, ArticleOgContent> = {
 };
 
 // Per-locale metadata so the alt text matches the page language
-export function generateImageMetadata({ params: { locale } }: { params: { locale: string } }) {
+export async function generateImageMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   const { alt } = CONTENT[locale] ?? CONTENT.en;
   return [{ id: 'cover', alt, size: OG_IMAGE_SIZE, contentType: 'image/png' }];
 }
 
-export default function Image({ params: { locale } }: { params: { locale: string } }) {
+export default async function Image({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   const { title, description } = CONTENT[locale] ?? CONTENT.en;
   return renderArticleOgImage({ title, description, tags: ['linux', 'security', 'cryptography'] });
 }

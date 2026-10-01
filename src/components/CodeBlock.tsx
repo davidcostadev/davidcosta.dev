@@ -83,7 +83,7 @@ function Toast({ status, message }: { status: Exclude<CopyStatus, null>; message
 export function CodeBlock({ className = '', children, ...props }: ComponentProps<'pre'>) {
   const t = useTranslations('codeBlock');
   const preRef = useRef<HTMLPreElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [wrap, setWrap] = useState(false);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>(null);
 
