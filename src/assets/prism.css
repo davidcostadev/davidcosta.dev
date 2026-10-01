@@ -1,215 +1,168 @@
-/* Custom CSS Variables */
+/*
+ * Code blocks and syntax highlighting (Prism tokens from remark-prism).
+ * Palette based on GitHub Light / Dark, on neutral surfaces that match the
+ * site background. Every token color keeps at least 4.5:1 against its block.
+ */
 html {
-  /* --sp-colors-accent: #dfd1fa;
-  --sp-colors-clickable: #70db94;
-  --sp-colors-disabled: #a38dce;
-  --sp-colors-error: #ff4d4d;
-  --sp-colors-error-surface: #f14c4c;
-  --sp-colors-surface1: #2c1f47;
-  --sp-colors-surface2: #231839;
-  --sp-syntax-color-plain: #dfd1fa;
-  --sp-syntax-color-comment: #a38dce;
-  --sp-syntax-color-keyword: #70db94;
-  --sp-syntax-color-tag: #ff75ba;
-  --sp-syntax-color-punctuation: #a38dce;
-  --sp-syntax-color-definition: #dfd1fa;
-  --sp-syntax-color-property: #70db94;
-  --sp-syntax-color-static: #5ed5ed;
-  --sp-syntax-color-string: #ff75ba; */
-  --sp-colors-accent: #087ea4;
-  --sp-colors-clickable: #959da5;
-  --sp-colors-disabled: #24292e;
-  --sp-colors-error: #811e18;
-  --sp-colors-error-surface: #ffcdca;
-  --sp-colors-surface1: #e4e7eb;
-  --sp-colors-surface2: #fff;
-  --sp-syntax-color-plain: #24292e;
-  --sp-syntax-color-comment: #6a737d;
-  --sp-syntax-color-keyword: #d73a49;
-  --sp-syntax-color-tag: #22863a;
-  --sp-syntax-color-punctuation: #24292e;
-  --sp-syntax-color-definition: #6f42c1;
-  --sp-syntax-color-property: #005cc5;
-  --sp-syntax-color-static: #032f62;
-  --sp-syntax-color-string: #032f62;
+  --code-bg: #f6f8fa;
+  --code-border: #e5e7eb;
+  --code-text: #1f2328;
+  --code-output-bg: #eef1f5;
+  --code-output-text: #424a53;
+  --code-inline-bg: #e8ebef;
+  --code-inline-border: #d0d7de;
+  --code-selection: rgba(147, 51, 234, 0.2);
+
+  --syntax-comment: #59636e;
+  --syntax-keyword: #cf222e;
+  --syntax-command: #8250df;
+  --syntax-flag: #0550ae;
+  --syntax-string: #116329;
+  --syntax-variable: #953800;
+  --syntax-number: #0550ae;
+  --syntax-punctuation: #57606a;
 }
 
 html.dark {
-  --sp-colors-accent: #dfd1fa;
-  --sp-colors-clickable: #70db94;
-  --sp-colors-disabled: #a38dce;
-  --sp-colors-error: #ff4d4d;
-  --sp-colors-error-surface: #f14c4c;
-  --sp-colors-surface1: #2c1f47;
-  --sp-colors-surface2: #231839;
-  --sp-syntax-color-plain: #dfd1fa;
-  --sp-syntax-color-comment: #a38dce;
-  --sp-syntax-color-keyword: #70db94;
-  --sp-syntax-color-tag: #ff75ba;
-  --sp-syntax-color-punctuation: #a38dce;
-  --sp-syntax-color-definition: #dfd1fa;
-  --sp-syntax-color-property: #70db94;
-  --sp-syntax-color-static: #5ed5ed;
-  --sp-syntax-color-string: #ff75ba;
+  --code-bg: #1a2130;
+  --code-border: #2d3748;
+  --code-text: #e6edf3;
+  --code-output-bg: #0b111d;
+  --code-output-text: #c9d1d9;
+  --code-inline-bg: #2d3748;
+  --code-inline-border: #414d61;
+  --code-selection: rgba(192, 132, 252, 0.3);
+
+  --syntax-comment: #9ca3af;
+  --syntax-keyword: #ff7b72;
+  --syntax-command: #d2a8ff;
+  --syntax-flag: #79c0ff;
+  --syntax-string: #7ee787;
+  --syntax-variable: #ffa657;
+  --syntax-number: #79c0ff;
+  --syntax-punctuation: #9ca3af;
 }
 
-/* Remark Highlight Custom Styling */
-.remark-highlight {
-  /* background-color: #2c1f47; */
-  @apply my-8;
-}
-
+/* Inline code */
 code:not([class*='language-']) {
-  background-color: var(--sp-colors-surface1);
-  color: var(--sp-syntax-color-plain);
+  background-color: var(--code-inline-bg);
+  border: 1px solid var(--code-inline-border);
+  color: var(--code-text);
   padding: 0.1em 0.3em;
   border-radius: 0.3em;
   white-space: normal;
-  font-size: 16px;
-}
-.light code:not([class*='language-']) {
-  background-color: var(--sp-colors-surface1);
+  font-size: 0.85em;
 }
 a code:not([class*='language-']) {
   color: inherit;
 }
 
+/* Code blocks */
+.remark-highlight {
+  @apply my-8;
+}
+
 code[class*='language-'],
 pre[class*='language-'] {
-  color: var(--sp-syntax-color-plain);
   @apply font-code;
+  color: var(--code-text);
+  font-size: 15px;
+  line-height: 1.6;
   text-align: left;
   white-space: pre;
   word-spacing: normal;
   word-break: normal;
   word-wrap: normal;
-  line-height: 1.5;
-  -moz-tab-size: 4;
-  -o-tab-size: 4;
   tab-size: 4;
-  -webkit-hyphens: none;
-  -moz-hyphens: none;
-  -ms-hyphens: none;
   hyphens: none;
-  font-size: 16px;
 }
-pre[class*='language-']::-moz-selection,
-pre[class*='language-'] ::-moz-selection,
-code[class*='language-']::-moz-selection,
-code[class*='language-'] ::-moz-selection {
-  text-shadow: none;
-  background: #ff75ba4d;
+
+/* Fira Code ligatures turn `->`, `---` and `&&` into glyphs that don't exist in a terminal */
+pre,
+code {
+  font-variant-ligatures: none;
+  font-feature-settings:
+    'liga' 0,
+    'calt' 0;
 }
+
+pre[class*='language-'] {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  padding: 1.25rem;
+  margin: 0.5em 0;
+  overflow: auto;
+  @apply rounded-xl;
+}
+
+/* Blocks without a language are terminal output or file contents */
+pre.language-text {
+  background: var(--code-output-bg);
+}
+pre.language-text code {
+  color: var(--code-output-text);
+}
+
 pre[class*='language-']::selection,
 pre[class*='language-'] ::selection,
 code[class*='language-']::selection,
 code[class*='language-'] ::selection {
-  text-shadow: none;
-  background: #ff75ba4d;
-}
-@media print {
-  code[class*='language-'],
-  pre[class*='language-'] {
-    text-shadow: none;
-  }
-}
-/* Code blocks */
-code[class*='language-'],
-pre[class*='language-'] {
-  background: 0 0;
-  text-shadow: 0 1px rgba(0, 0, 0, 0.3);
-  @apply font-code;
-  text-align: left;
-  white-space: pre;
-  word-spacing: normal;
-  word-break: normal;
-  word-wrap: normal;
-  line-height: 1.5;
-  -moz-tab-size: 4;
-  -o-tab-size: 4;
-  tab-size: 4;
-  -webkit-hyphens: none;
-  -moz-hyphens: none;
-  -ms-hyphens: none;
-  hyphens: none;
-}
-.light code[class*='language-'],
-.light pre[class*='language-'] {
-  text-shadow: none;
-}
-pre[class*='language-'] {
-  padding: 1.25rem;
-  margin: 0.5em 0;
-  overflow: auto;
-  @apply rounded-2xl;
-}
-.light pre[class*='language-'] {
-  @apply shadow-lg;
+  background: var(--code-selection);
 }
 
-:not(pre) > code[class*='language-'],
-pre[class*='language-'] {
-  background: var(--sp-colors-surface2);
-}
-:not(pre) > code[class*='language-'] {
-  padding: 0.1em;
-  white-space: normal;
-  @apply rounded-2xl;
-}
-.light :not(pre) > code[class*='language-'] {
-  @apply shadow-lg;
-}
-.token.cdata,
+/* Tokens */
 .token.comment,
+.token.prolog,
 .token.doctype,
-.token.prolog {
-  color: var(--sp-syntax-color-comment);
+.token.cdata {
+  color: var(--syntax-comment);
+  font-style: italic;
 }
-.token.punctuation {
-  color: var(--sp-syntax-color-punctuation);
-}
-.namespace {
-  opacity: 0.7;
-}
-.token.constant,
-.token.deleted,
-.token.property,
-.token.symbol,
-.token.tag {
-  color: var(--sp-syntax-color-tag);
-}
-.token.boolean,
-.token.number {
-  color: var(--sp-syntax-color-static);
-}
-.token.attr-name,
-.token.builtin,
-.token.char,
-.token.inserted,
-.token.selector,
-.token.string {
-  color: var(--sp-syntax-color-string);
-}
-.language-css .token.string,
-.style .token.string,
-.token.entity,
-.token.operator,
-.token.url,
-.token.variable {
-  color: var(--sp-syntax-color-plain);
-}
-.token.atrule,
-.token.attr-value,
-.token.class-name,
-.token.function {
-  color: var(--sp-syntax-color-definition);
-}
-.token.keyword {
-  color: var(--sp-syntax-color-keyword);
-}
+.token.keyword,
 .token.important,
+.token.deleted {
+  color: var(--syntax-keyword);
+}
+.token.function,
+.token.builtin,
+.token.class-name,
+.token.atrule,
+.token.tag,
+.token.selector {
+  color: var(--syntax-command);
+}
+.token.parameter,
+.token.property,
+.token.attr-name {
+  color: var(--syntax-flag);
+}
+.token.string,
+.token.char,
+.token.attr-value,
+.token.inserted,
+.token.url {
+  color: var(--syntax-string);
+}
+.token.variable,
+.token.constant,
+.token.symbol,
 .token.regex {
-  color: var(--sp-syntax-color-tag);
+  color: var(--syntax-variable);
+}
+/* bash flags are tagged `parameter variable` */
+.token.parameter.variable {
+  color: var(--syntax-flag);
+}
+.token.number,
+.token.boolean {
+  color: var(--syntax-number);
+}
+.token.punctuation,
+.token.operator {
+  color: var(--syntax-punctuation);
+}
+.token.namespace {
+  opacity: 0.7;
 }
 .token.bold,
 .token.important {
@@ -220,28 +173,4 @@ pre[class*='language-'] {
 }
 .token.entity {
   cursor: help;
-}
-
-pre[class*='language-'] {
-  padding: 1.25rem;
-  margin: 0.5em 0;
-  overflow: auto;
-}
-:not(pre) > code[class*='language-'],
-pre[class*='language-'] {
-  color: white;
-  background: var(--sp-colors-surface2);
-}
-
-:not(pre) > code[class*='language-'] {
-  padding: 0.1em;
-  border-radius: 0.3em;
-  white-space: normal;
-}
-.token.important,
-.token.bold {
-  font-weight: bold;
-}
-.token.italic {
-  font-style: italic;
 }
