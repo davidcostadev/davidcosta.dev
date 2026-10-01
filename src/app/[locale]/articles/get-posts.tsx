@@ -1,9 +1,3 @@
-import { readdir } from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 interface Post {
   slug: string;
   title: string;
@@ -19,31 +13,31 @@ type GetPostsProps = {
   limit?: number;
 };
 
+// Every article's MDX file, listed by webpack at build time. Reading the folder
+// with fs instead breaks on hosts that render the page in a function that doesn't
+// ship the source files, where the list silently came back empty.
+const articles = import.meta.webpackContext('.', {
+  recursive: true,
+  regExp: /^\.\/[^/]+\/[^/]+\.mdx$/,
+  mode: 'lazy',
+});
+
 export async function getPosts({ limit = 10, lang }: GetPostsProps): Promise<Post[]> {
   const posts: Post[] = [];
 
-  try {
-    const dirPath = path.join(__dirname);
-    const slugs = (await readdir(dirPath, { withFileTypes: true })).filter((dirent) =>
-      dirent.isDirectory(),
-    );
+  for (const key of articles.keys()) {
+    const [, slug, fileLang] = key.match(/^\.\/([^/]+)\/([^/]+)\.mdx$/) ?? [];
+    if (fileLang !== lang) continue;
 
-    for (const { name } of slugs) {
-      const mdxFilePath = path.join(dirPath, name, `${lang}.mdx`);
-      try {
-        const { metadata } = await import(`.${mdxFilePath.replace(__dirname, '')}`);
-        const postMetadata: Omit<Post, 'slug' | 'lang'> = metadata;
+    try {
+      const { metadata } = (await articles(key)) as { metadata: Omit<Post, 'slug' | 'lang'> };
 
-        if (!postMetadata.draft) {
-          posts.push({ slug: name, lang, ...postMetadata });
-        }
-      } catch (error) {
-        console.error(`Error on load ${mdxFilePath}:`, error);
-        continue;
+      if (!metadata.draft) {
+        posts.push({ slug, lang, ...metadata });
       }
+    } catch (error) {
+      console.error(`Error on load ${key}:`, error);
     }
-  } catch (error) {
-    console.error(`Error on read directory ${lang}:`, error);
   }
 
   // Sort before limiting, otherwise the limit keeps the first folders alphabetically
