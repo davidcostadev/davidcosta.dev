@@ -1,5 +1,6 @@
 import mdxfrom from '@next/mdx';
 import rehypePrism from 'rehype-prism-plus';
+import rehypeSlug from 'rehype-slug';
 import remarkGfm from 'remark-gfm';
 
 import remarkFrontmatter from 'remark-frontmatter';
@@ -102,6 +103,7 @@ const withMDX = mdxfrom({
     gfm: true,
     remarkPlugins: [remarkGfm, remarkPlainCode, remarkFrontmatter, remarkMdxFrontmatter],
     rehypePlugins: [
+      rehypeSlug,
       [rehypePrism, { ignoreMissing: true }],
       rehypePreLanguage,
       rehypeLineDigits,

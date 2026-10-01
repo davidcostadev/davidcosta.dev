@@ -1,6 +1,7 @@
 import type { MDXComponents } from 'mdx/types';
 
 import { CodeBlock } from 'components/CodeBlock';
+import { HeadingLink } from 'components/HeadingLink';
 
 const listClassName = 'font-body text-xl mb-[1.6rem] text-body-light dark:text-body-dark';
 
@@ -21,35 +22,45 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         {...props}
       />
     ),
-    h2: (props) => (
+    h2: ({ children, ...props }) => (
       <h2
         className="font-title text-4xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
-      />
+      >
+        <HeadingLink id={props.id}>{children}</HeadingLink>
+      </h2>
     ),
-    h3: (props) => (
+    h3: ({ children, ...props }) => (
       <h3
         className="font-title text-3xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
-      />
+      >
+        <HeadingLink id={props.id}>{children}</HeadingLink>
+      </h3>
     ),
-    h4: (props) => (
+    h4: ({ children, ...props }) => (
       <h4
         className="font-title text-2xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
-      />
+      >
+        <HeadingLink id={props.id}>{children}</HeadingLink>
+      </h4>
     ),
-    h5: (props) => (
+    h5: ({ children, ...props }) => (
       <h5
         className="font-title text-xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
-      />
+      >
+        <HeadingLink id={props.id}>{children}</HeadingLink>
+      </h5>
     ),
-    h6: (props) => (
+    h6: ({ children, ...props }) => (
       <h6
         className="font-title text-base text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
-      />
+      >
+        <HeadingLink id={props.id}>{children}</HeadingLink>
+      </h6>
     ),
     // GFM task lists (`- [ ]`) come with their own classes, so they get their own styles
     ul: ({ className, ...props }) =>
