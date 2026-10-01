@@ -113,6 +113,8 @@ code {
   font-size: 12px;
   letter-spacing: 0.02em;
   color: var(--syntax-comment);
+  /* Keep the label and button tooltips out of text copied from the page */
+  user-select: none;
 }
 
 .code-block__actions {
