@@ -1,46 +1,46 @@
 /*
  * Code blocks and syntax highlighting (Prism tokens from remark-prism).
- * Palette based on GitHub Light / Dark, on neutral surfaces that match the
- * site background. Every token color keeps at least 4.5:1 against its block.
+ * Surfaces follow the site palette (GitHub Dark + Nord, see tailwind.config.js);
+ * dark tokens use Nord Frost / Aurora. Every token keeps 4.5:1+ against its block.
  */
 html {
   --code-bg: #f6f8fa;
-  --code-border: #e5e7eb;
-  --code-text: #1f2328;
-  --code-output-bg: #eef1f5;
-  --code-output-text: #424a53;
-  --code-inline-bg: #e8ebef;
-  --code-inline-border: #d0d7de;
-  --code-selection: rgba(147, 51, 234, 0.2);
+  --code-border: #d8dee9;
+  --code-text: #2e3440;
+  --code-output-bg: #eceff4;
+  --code-output-text: #3b4252;
+  --code-inline-bg: #e5e9f0;
+  --code-inline-border: #d8dee9;
+  --code-selection: rgba(130, 80, 223, 0.2);
 
-  --syntax-comment: #59636e;
-  --syntax-keyword: #cf222e;
+  --syntax-comment: #5f6b7c;
+  --syntax-keyword: #b0434e;
   --syntax-command: #8250df;
-  --syntax-flag: #0550ae;
-  --syntax-string: #116329;
-  --syntax-variable: #953800;
-  --syntax-number: #0550ae;
-  --syntax-punctuation: #57606a;
+  --syntax-flag: #2f6690;
+  --syntax-string: #476b33;
+  --syntax-variable: #a2512e;
+  --syntax-number: #7a4f8f;
+  --syntax-punctuation: #4c566a;
 }
 
 html.dark {
-  --code-bg: #1a2130;
-  --code-border: #2d3748;
+  --code-bg: #1c2128;
+  --code-border: #343a46;
   --code-text: #e6edf3;
-  --code-output-bg: #0b111d;
-  --code-output-text: #c9d1d9;
-  --code-inline-bg: #2d3748;
-  --code-inline-border: #414d61;
-  --code-selection: rgba(192, 132, 252, 0.3);
+  --code-output-bg: #0d1117;
+  --code-output-text: #d8dee9;
+  --code-inline-bg: #2d333b;
+  --code-inline-border: #444c56;
+  --code-selection: rgba(179, 146, 240, 0.3);
 
-  --syntax-comment: #9ca3af;
-  --syntax-keyword: #ff7b72;
-  --syntax-command: #d2a8ff;
-  --syntax-flag: #79c0ff;
-  --syntax-string: #7ee787;
-  --syntax-variable: #ffa657;
-  --syntax-number: #79c0ff;
-  --syntax-punctuation: #9ca3af;
+  --syntax-comment: #8b949e;
+  --syntax-keyword: #e5838b;
+  --syntax-command: #b392f0;
+  --syntax-flag: #88c0d0;
+  --syntax-string: #a3be8c;
+  --syntax-variable: #d08770;
+  --syntax-number: #b48ead;
+  --syntax-punctuation: #9198a1;
 }
 
 /* Inline code */
