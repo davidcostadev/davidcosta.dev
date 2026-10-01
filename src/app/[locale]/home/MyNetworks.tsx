@@ -43,9 +43,4 @@ const networks = [
     url: 'https://github.com/davidcostadev',
     icon: icons.IconGithub,
   },
-  {
-    name: 'Twitter',
-    url: 'https://twitter.com/davidcostadev',
-    icon: icons.IconTwitter,
-  },
 ];
