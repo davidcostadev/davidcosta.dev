@@ -35,6 +35,44 @@ const rehypePreLanguage = () => (tree) => {
   visit(tree);
 };
 
+// Wraps spaces and tabs inside code blocks so CodeBlock's "show whitespace"
+// toggle can draw them with CSS. The characters stay in the text, so copying
+// and layout are unchanged. Spaces are wrapped per run, tabs one by one,
+// since each tab gets its own arrow.
+const rehypeWhitespace = () => (tree) => {
+  const wrap = (value) =>
+    value
+      .split(/( +|\t)/)
+      .filter(Boolean)
+      .map((part) =>
+        part === '\t' || part[0] === ' '
+          ? {
+              type: 'element',
+              tagName: 'span',
+              properties: { className: [part === '\t' ? 'ws-tab' : 'ws-space'] },
+              children: [{ type: 'text', value: part }],
+            }
+          : { type: 'text', value: part },
+      );
+
+  const visitCode = (node) => {
+    node.children = node.children?.flatMap((child) => {
+      if (child.type === 'text') return wrap(child.value);
+      visitCode(child);
+      return [child];
+    });
+  };
+
+  const visit = (node) => {
+    if (node.tagName === 'pre') {
+      node.children?.filter((child) => child.tagName === 'code').forEach(visitCode);
+      return;
+    }
+    node.children?.forEach(visit);
+  };
+  visit(tree);
+};
+
 const withNextIntl = createNextIntlPlugin();
 const withMDX = mdxfrom({
   // Optionally provide remark and rehype plugins
@@ -46,7 +84,7 @@ const withMDX = mdxfrom({
     commonmark: true,
     gfm: true,
     remarkPlugins: [remarkGfm, remarkPlainCode, remarkFrontmatter, remarkMdxFrontmatter],
-    rehypePlugins: [[rehypePrism, { ignoreMissing: true }], rehypePreLanguage],
+    rehypePlugins: [[rehypePrism, { ignoreMissing: true }], rehypePreLanguage, rehypeWhitespace],
     // If you use `MDXProvider`, uncomment the following line.
     // providerImportSource: '@mdx-js/react',
   },

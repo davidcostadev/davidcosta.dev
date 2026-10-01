@@ -1,5 +1,5 @@
 /*
- * Code blocks and syntax highlighting (Prism tokens from remark-prism).
+ * Code blocks and syntax highlighting (Prism tokens from rehype-prism-plus).
  * Surfaces follow the site palette (GitHub Dark + Nord, see tailwind.config.js);
  * dark tokens use Nord Frost / Aurora. Every token keeps 4.5:1+ against its block.
  */
@@ -12,6 +12,7 @@ html {
   --code-inline-bg: #e5e9f0;
   --code-inline-border: #d8dee9;
   --code-selection: rgba(130, 80, 223, 0.2);
+  --code-whitespace: rgba(95, 107, 124, 0.5);
 
   --syntax-comment: #5f6b7c;
   --syntax-keyword: #b0434e;
@@ -32,6 +33,7 @@ html.dark {
   --code-inline-bg: #2d333b;
   --code-inline-border: #444c56;
   --code-selection: rgba(179, 146, 240, 0.3);
+  --code-whitespace: rgba(145, 152, 161, 0.45);
 
   --syntax-comment: #8b949e;
   --syntax-keyword: #e5838b;
@@ -207,6 +209,23 @@ pre[class*='language-'] {
     animation: none;
     transition: none;
   }
+}
+
+/* Show whitespace: a dot per space, an arrow per tab. Drawn by CSS only, so
+   the copied text never contains them. 1ch is one cell of the monospace font. */
+pre[data-whitespace] .ws-space {
+  background-image: radial-gradient(circle, var(--code-whitespace) 1.25px, transparent 1.75px);
+  background-size: 1ch 100%;
+  background-repeat: repeat-x;
+}
+pre[data-whitespace] .ws-tab {
+  position: relative;
+}
+pre[data-whitespace] .ws-tab::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--code-whitespace);
 }
 
 pre[data-wrap],

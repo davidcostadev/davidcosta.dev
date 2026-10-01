@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { CheckIcon, ClipboardIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { useTranslations } from 'next-intl';
@@ -9,6 +16,52 @@ const PLAIN_LANGS = ['output', 'text'] as const;
 const TOAST_DURATION = 2000;
 
 type CopyStatus = 'copied' | 'copyFailed' | null;
+
+/**
+ * "Show whitespace" is one setting for every block on the site, remembered in
+ * localStorage and kept in sync across blocks and tabs. Memory is the source of
+ * truth, so the toggle still works when storage is unavailable.
+ */
+const WHITESPACE_KEY = 'codeBlock.showWhitespace';
+const whitespaceListeners = new Set<() => void>();
+let showWhitespace: boolean | undefined;
+
+function readWhitespace() {
+  try {
+    return localStorage.getItem(WHITESPACE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function getWhitespace() {
+  showWhitespace ??= readWhitespace();
+  return showWhitespace;
+}
+
+function setWhitespace(value: boolean) {
+  showWhitespace = value;
+  try {
+    localStorage.setItem(WHITESPACE_KEY, String(value));
+  } catch {
+    // Storage blocked: the setting lasts until the page is reloaded
+  }
+  whitespaceListeners.forEach((listener) => listener());
+}
+
+function subscribeWhitespace(listener: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== WHITESPACE_KEY) return;
+    showWhitespace = event.newValue === 'true';
+    listener();
+  };
+  whitespaceListeners.add(listener);
+  window.addEventListener('storage', onStorage);
+  return () => {
+    whitespaceListeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
+}
 
 /** Clipboard API first; falls back to execCommand where it's unavailable or denied. */
 async function copyToClipboard(text: string) {
@@ -46,6 +99,27 @@ function WrapIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+function WhitespaceIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M3 8h8m-3-3 3 3-3 3" />
+      <circle cx="4" cy="16" r="0.75" fill="currentColor" />
+      <circle cx="9" cy="16" r="0.75" fill="currentColor" />
+      <circle cx="14" cy="16" r="0.75" fill="currentColor" />
+      <circle cx="19" cy="16" r="0.75" fill="currentColor" />
+    </svg>
+  );
+}
+
 function ActionButton({
   label,
   children,
@@ -79,13 +153,14 @@ function Toast({ status, message }: { status: Exclude<CopyStatus, null>; message
   );
 }
 
-/** Code block with a language label, a line-wrap toggle and a copy button. */
+/** Code block with a language label, line-wrap and whitespace toggles, and a copy button. */
 export function CodeBlock({ className = '', children, ...props }: ComponentProps<'pre'>) {
   const t = useTranslations('codeBlock');
   const preRef = useRef<HTMLPreElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [wrap, setWrap] = useState(false);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>(null);
+  const whitespace = useSyncExternalStore(subscribeWhitespace, getWhitespace, () => false);
 
   const lang = className.match(/language-(\S+)/)?.[1] ?? 'output';
   const isPlain = (PLAIN_LANGS as readonly string[]).includes(lang);
@@ -117,6 +192,13 @@ export function CodeBlock({ className = '', children, ...props }: ComponentProps
           >
             <WrapIcon />
           </ActionButton>
+          <ActionButton
+            label={whitespace ? t('hideWhitespace') : t('showWhitespace')}
+            onClick={() => setWhitespace(!whitespace)}
+            aria-pressed={whitespace}
+          >
+            <WhitespaceIcon />
+          </ActionButton>
           <ActionButton label={t('copy')} onClick={copy}>
             {copyStatus === 'copied' ? (
               <CheckIcon aria-hidden="true" />
@@ -126,7 +208,13 @@ export function CodeBlock({ className = '', children, ...props }: ComponentProps
           </ActionButton>
         </div>
       </div>
-      <pre ref={preRef} className={className} data-wrap={wrap || undefined} {...props}>
+      <pre
+        ref={preRef}
+        className={className}
+        data-wrap={wrap || undefined}
+        data-whitespace={whitespace || undefined}
+        {...props}
+      >
         {children}
       </pre>
       {copyStatus && <Toast status={copyStatus} message={t(copyStatus)} />}

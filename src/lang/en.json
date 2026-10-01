@@ -30,6 +30,8 @@
     "copied": "Copied to clipboard",
     "wrap": "Wrap long lines",
     "noWrap": "Don't wrap long lines",
+    "showWhitespace": "Show whitespace",
+    "hideWhitespace": "Hide whitespace",
     "output": "output",
     "text": "text",
     "copyFailed": "Couldn't copy, select the text and copy it manually"

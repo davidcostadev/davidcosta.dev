@@ -30,6 +30,8 @@
     "copied": "Copiado para a área de transferência",
     "wrap": "Quebrar linhas longas",
     "noWrap": "Não quebrar linhas longas",
+    "showWhitespace": "Mostrar espaços e tabs",
+    "hideWhitespace": "Ocultar espaços e tabs",
     "output": "output",
     "text": "texto",
     "copyFailed": "Não foi possível copiar, selecione o texto e copie manualmente"
