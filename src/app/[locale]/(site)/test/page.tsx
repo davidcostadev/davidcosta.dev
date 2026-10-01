@@ -15,7 +15,8 @@ export default function TestPage() {
             Meu Primeiro Artigo
           </h2>
           <p className="font-body text-xl my-4">
-            Aqui está um exemplo de texto do meu blog. Este é um parágrafo usando a fonte Lato.
+            Aqui está um exemplo de texto do meu blog. Este é um parágrafo usando a fonte IBM Plex
+            Sans.
           </p>
           <pre className="bg-gray-800 text-fira-code p-4 rounded-md my-4">
             <code className="font-code text-green-400">{`const greeting = 'Hello, World!';`}</code>

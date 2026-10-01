@@ -31,14 +31,13 @@ export const Navbar = () => {
       className={clsx(
         'sticky top-0 z-50 px-5',
         'bg-white dark:bg-gray-900 bg-opacity-90',
+        'border-b border-gray-200 dark:border-gray-800',
         'transition-shadow duration-300',
-        {
-          'shadow-md border-b border-gray-300 dark:border-white/20': isScrolled,
-        },
+        { 'shadow-md': isScrolled },
       )}
     >
       <div className="max-w-4xl m-auto flex justify-between items-center h-[64px]">
-        <h1 className="text-2xl font-medium">
+        <h1 className="font-title text-2xl font-medium">
           <Link
             href="/"
             className="text-primary hover:text-purple-400"

@@ -10,7 +10,7 @@ export const MyNetworks = () => {
       <BackgroundPlane />
       <div className="absolute top-0 left-0 w-full h-full z-10 flex items-center">
         <div className="max-w-3xl m-auto px-2 sm:px-6 ">
-          <h3 className="text-primary text-2xl font-medium my-2 px-3 sm:mb-6 text-black dark:text-white">
+          <h3 className="font-title text-primary text-2xl font-medium my-2 px-3 sm:mb-6 text-black dark:text-white">
             {t('homepage.networks.title')}
           </h3>
           <ul className="flex justify-center gap-4">

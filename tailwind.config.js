@@ -76,8 +76,9 @@ module.exports = {
         },
       },
       fontFamily: {
-        title: ['var(--font-volkhov)'],
-        body: ['var(--font-lato)'],
+        // Titles share the code font, for a terminal look
+        title: ['var(--font-code)', 'ui-monospace', 'monospace'],
+        body: ['var(--font-body)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         code: ['var(--font-code)', 'ui-monospace', 'monospace'],
       },
       lineHeight: {

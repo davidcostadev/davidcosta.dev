@@ -1,6 +1,6 @@
 import { GoogleAnalytics } from '@next/third-parties/google';
 
-import { Volkhov, Lato } from 'next/font/google';
+import { IBM_Plex_Sans } from 'next/font/google';
 import localFont from 'next/font/local';
 
 import { setRequestLocale, getMessages } from 'next-intl/server';
@@ -17,18 +17,12 @@ import { locales } from 'config';
 import { Footer } from 'components/Footer';
 import { Navbar } from 'components/Navbar';
 
-const volkhov = Volkhov({
+const plexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   display: 'swap',
-  weight: ['400', '700'],
-  variable: '--font-volkhov',
-});
-
-const lato = Lato({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['400', '700'],
-  variable: '--font-lato',
+  weight: ['400', '500', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-body',
 });
 
 const commitMono = localFont({
@@ -88,7 +82,7 @@ export default async function RootLayout({ children, params }: LayoutProps) {
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg relative ${volkhov.variable} ${lato.variable} ${commitMono.variable}`}
+        className={`antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg font-body relative ${plexSans.variable} ${commitMono.variable}`}
         suppressHydrationWarning
       >
         <NextIntlClientProvider messages={messages} locale={locale}>

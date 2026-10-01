@@ -69,3 +69,21 @@ article header + h2[class] {
   position: relative;
   scroll-margin-top: 80px;
 }
+
+/* Titles use the monospace code font, whose glyphs are wide: tighten the
+   tracking and step the sizes down so headlines don't sprawl */
+.font-title {
+  letter-spacing: -0.04em;
+}
+.font-title.text-5xl {
+  font-size: 2.5rem;
+}
+.font-title.text-4xl {
+  font-size: 1.9rem;
+}
+.font-title.text-3xl {
+  font-size: 1.6rem;
+}
+.font-title.text-2xl {
+  font-size: 1.3rem;
+}
