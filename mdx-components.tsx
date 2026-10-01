@@ -1,5 +1,7 @@
 import type { MDXComponents } from 'mdx/types';
 
+import { CodeBlock } from 'components/CodeBlock';
+
 const listClassName = 'font-body text-xl mb-[1.6rem] text-body-light dark:text-body-dark';
 
 // This file is required to use MDX in `app` directory.
@@ -68,10 +70,25 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       ),
     strong: (props) => <strong className="font-bold text-gray-950 dark:text-white" {...props} />,
     table: (props) => (
-      <div className="overflow-x-auto mb-[1.6rem]">
-        <table {...props} />
+      <div className="overflow-x-auto mb-[1.6rem] rounded-xl border border-gray-300 dark:border-gray-700">
+        <table className="w-full border-collapse font-body text-lg" {...props} />
       </div>
     ),
+    thead: (props) => <thead className="bg-gray-50 dark:bg-gray-800" {...props} />,
+    th: (props) => (
+      <th
+        className="text-left font-bold px-4 py-2.5 border-b border-gray-300 dark:border-gray-700 text-primary-light dark:text-primary-dark"
+        {...props}
+      />
+    ),
+    td: (props) => (
+      <td
+        className="px-4 py-2.5 align-top border-b border-gray-200 dark:border-gray-800 text-body-light dark:text-body-dark"
+        {...props}
+      />
+    ),
+    tr: (props) => <tr className="[&:last-child>td]:border-b-0" {...props} />,
+    pre: (props) => <CodeBlock {...props} />,
     code: (props) => <code className="font-code px-1 py-px rounded-md " {...props} />,
     hr: (props) => <hr className="border-border-200 dark:border-white/10 mb-[1.6rem]" {...props} />,
     a: (props) => (

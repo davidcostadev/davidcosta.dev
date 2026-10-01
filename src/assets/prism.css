@@ -77,7 +77,7 @@ pre[class*='language-'] {
   hyphens: none;
 }
 
-/* Fira Code ligatures turn `->`, `---` and `&&` into glyphs that don't exist in a terminal */
+/* Ligatures turn `->`, `---` and `&&` into glyphs that don't exist in a terminal */
 pre,
 code {
   font-variant-ligatures: none;
@@ -86,21 +86,137 @@ code {
     'calt' 0;
 }
 
-pre[class*='language-'] {
+/* Block container: label bar on top, code below (see components/CodeBlock.tsx) */
+.code-block {
   background: var(--code-bg);
   border: 1px solid var(--code-border);
-  padding: 1rem 1.25rem;
   margin: 0.4em 0;
-  overflow: auto;
   @apply rounded-xl;
 }
 
-/* Blocks without a language are terminal output or file contents */
-pre.language-text {
+/* Command output (no language) and file contents (```text) */
+.code-block--plain {
   background: var(--code-output-bg);
 }
-pre.language-text code {
+.code-block--plain code {
   color: var(--code-output-text);
+}
+
+.code-block__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.125rem 0.5rem 0.125rem 1.25rem;
+  border-bottom: 1px solid var(--code-border);
+  @apply font-code;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--syntax-comment);
+}
+
+.code-block__actions {
+  display: flex;
+  gap: 0.125rem;
+}
+.code-block__action {
+  position: relative;
+  display: inline-flex;
+  padding: 0.375rem;
+  border-radius: 0.375rem;
+  color: var(--syntax-punctuation);
+}
+.code-block__action:hover,
+.code-block__action:focus-visible {
+  background: var(--code-inline-bg);
+  color: var(--code-text);
+}
+.code-block__action[aria-pressed='true'] {
+  color: var(--syntax-command);
+}
+
+/* Tooltip above the button, right-aligned so it never leaves the block */
+.code-block__tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 10;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background: var(--code-text);
+  color: var(--code-bg);
+  @apply font-body;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.code-block__action:hover .code-block__tooltip,
+.code-block__action:focus-visible .code-block__tooltip {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 300ms;
+}
+.code-block__actions svg {
+  width: 16px;
+  height: 16px;
+}
+
+pre[class*='language-'] {
+  padding: 1rem 1.25rem;
+  margin: 0;
+  overflow: auto;
+  @apply rounded-b-xl;
+}
+
+/* Copy feedback, rendered at the end of <body> */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  /* inverted, like the tooltip, so it stands out over code blocks */
+  background: var(--code-text);
+  color: var(--code-bg);
+  @apply font-body shadow-lg;
+  font-size: 15px;
+  transform: translateX(-50%);
+  animation: toast-in 160ms ease-out;
+}
+.toast svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.5rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .code-block__tooltip {
+    animation: none;
+    transition: none;
+  }
+}
+
+pre[data-wrap],
+pre[data-wrap] code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 pre[class*='language-']::selection,

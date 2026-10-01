@@ -64,7 +64,7 @@ ls -l ~/.config/age/key.txt
 
 Inside, `key.txt` has only three lines:
 
-```
+```text
 # created: 2026-10-01T09:31:13-03:00
 # public key: age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4
 AGE-SECRET-KEY-1QUS6JV3SG65QCQHVHNVN4CEGY5QJKWVUDDMEYX067HVR5Y45LD0Q926WJ2
@@ -234,7 +234,7 @@ The passphrase never appears on screen and can't be passed as an argument. That'
 
 ### The header changes
 
-```
+```text
 age-encryption.org/v1
 -> scrypt 8CmxPV7t2hEFpbJXxmtuKQ 18
 luCBRo3+FegXbAvg5C1qn4K35ldq1S1xMQACKoG91Ms
@@ -307,7 +307,7 @@ Empty lines and lines starting with `#` are ignored, so you can document whose k
 
 The header now has **two envelopes**, one per key, both containing the same file key:
 
-```
+```text
 age-encryption.org/v1
 -> X25519 CEWWVmjfNsH6CV2r8mo41d9yWWthHXgtjdfYfmjxuW0     <- envelope 1
 XJLtj5tF6HfQetjxYo5aLY9xoiWVE6IdEngR/enCeLY
@@ -406,7 +406,7 @@ The file comes out encrypted to every key the person has registered, and any one
 
 ### What changes in the file, and why it matters
 
-```
+```text
 age-encryption.org/v1
 -> ssh-ed25519 nQeBCQ VG6b+02qyQ27wq/sBjnKf8UA6eQxkH/ScBHfnrQbDiQ
 2CSuE4Z+V0OhaekPTwgePe1EYcocZNk4tkkNuq9D8Hk
@@ -474,7 +474,7 @@ Confirm passphrase:
 
 The resulting file is a regular `.age` with an `scrypt` stanza:
 
-```
+```text
 age-encryption.org/v1
 -> scrypt sa5OxAPP8cKFzORwhMpNMQ 18
 JHJelDmEZGXtmSrJQJmJgsIrauj9WPd90jGiGm50CmM
@@ -523,7 +523,7 @@ age -d -i ~/.config/age/key-pq.txt pq.age
 
 The header now has the `mlkem768x25519` stanza, the hybrid of ML-KEM-768 (post-quantum, standardized by NIST) and X25519 (classic). To break it, an attacker has to defeat **both**.
 
-```
+```text
 age-encryption.org/v1
 -> mlkem768x25519 1GfS0gGndg60MDBCj2Ejhb7MXTmGCfzBJsJCR3UCs7aqMuHl/0A/FqWcUdH4cXG/...
 ```

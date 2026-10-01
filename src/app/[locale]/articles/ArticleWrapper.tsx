@@ -3,6 +3,7 @@ import React from 'react';
 import { WithContext, BlogPosting } from 'schema-dts';
 
 import { ArticleHeader, FrontMatter } from './ArticleHeader';
+import { SITE_URL } from './article-metadata';
 
 export function ArticleWrapper({
   children,
@@ -12,6 +13,7 @@ export function ArticleWrapper({
   meta: FrontMatter;
 }) {
   const formattedData = new Date(meta.date).toISOString().split('T')[0];
+  const url = `${SITE_URL}${meta.alternates.canonical}`;
 
   const jsonLd: WithContext<BlogPosting> = {
     '@context': 'https://schema.org',
@@ -21,12 +23,16 @@ export function ArticleWrapper({
     author: {
       '@type': 'Person',
       name: 'David Costa',
+      url: SITE_URL,
     },
     datePublished: formattedData,
     description: meta.description,
+    inLanguage: meta.lang,
+    keywords: meta.tags,
+    url,
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': meta.alternates.canonical,
+      '@id': url,
     },
   };
 

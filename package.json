@@ -12,6 +12,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@fontsource/commit-mono": "^5",
     "@heroicons/react": "2.1.5",
     "@next/third-parties": "14.2.33",
     "clsx": "^2.1.1",

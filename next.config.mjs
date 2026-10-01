@@ -13,12 +13,16 @@ import createNextIntlPlugin from 'next-intl/plugin';
 // remark-prism HTML-escapes code blocks without a language into a text node,
 // so React escapes them again and quotes render as &quot;. Render those blocks
 // here, with the same markup remark-prism uses, before it can touch them.
+// A block without a language is command output; ```text marks file contents.
+const PLAIN_LANGS = { output: 'output', text: 'text', txt: 'text', plain: 'text' };
+
 const remarkPlainCode = () => (tree) => {
   const visit = (node) => {
     node.children?.forEach((child, index) => {
-      if (child.type !== 'code' || child.lang) return visit(child);
+      const lang = child.lang ? PLAIN_LANGS[child.lang] : 'output';
+      if (child.type !== 'code' || !lang) return visit(child);
 
-      const className = ['language-text'];
+      const className = [`language-${lang}`];
       node.children[index] = {
         type: 'plainCode',
         data: {

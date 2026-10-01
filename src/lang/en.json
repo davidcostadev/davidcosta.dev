@@ -17,7 +17,6 @@
     "experiences": "I work with <strong>Javascript</strong> and <strong>Typescript</strong>, using <strong>React</strong> as the main framework most of the time.",
     "goal": "This website is intended to concentrate my articles, projects, and be a hub for my networks.",
     "lastPosts": "Latest posts",
-
     "networks": {
       "title": "Find me on others places"
     }
@@ -25,5 +24,14 @@
   "blog": {
     "title": "Blog",
     "subtitle": "Welcome to my blog, where I write about my journey as a developer, and share some tips and tricks I've learned along the way."
+  },
+  "codeBlock": {
+    "copy": "Copy code",
+    "copied": "Copied to clipboard",
+    "wrap": "Wrap long lines",
+    "noWrap": "Don't wrap long lines",
+    "output": "output",
+    "text": "text",
+    "copyFailed": "Couldn't copy, select the text and copy it manually"
   }
 }

@@ -78,7 +78,7 @@ module.exports = {
       fontFamily: {
         title: ['var(--font-volkhov)'],
         body: ['var(--font-lato)'],
-        code: ['var(--font-fira-code)'],
+        code: ['var(--font-code)', 'ui-monospace', 'monospace'],
       },
       lineHeight: {
         base: '30px',

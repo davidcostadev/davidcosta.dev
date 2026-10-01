@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
+
+import { getArticleMetadata } from '../article-metadata';
 
 const MDXComponents = {
   en: dynamic(() => import('./en.mdx')),
@@ -9,6 +12,14 @@ interface PageProps {
   params: {
     locale: string;
   };
+}
+
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
+  return getArticleMetadata('practical-guide-to-age-on-linux', locale);
 }
 
 export default function Page({ params: { locale } }: PageProps): JSX.Element {

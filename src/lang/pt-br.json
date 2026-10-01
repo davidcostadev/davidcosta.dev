@@ -24,5 +24,14 @@
   "blog": {
     "title": "Blog",
     "subtitle": "Bem-vindo ao meu blog, onde escrevo sobre minha jornada como desenvolvedor e compartilho algumas dicas e truques que aprendi ao longo do caminho."
+  },
+  "codeBlock": {
+    "copy": "Copiar código",
+    "copied": "Copiado para a área de transferência",
+    "wrap": "Quebrar linhas longas",
+    "noWrap": "Não quebrar linhas longas",
+    "output": "output",
+    "text": "texto",
+    "copyFailed": "Não foi possível copiar, selecione o texto e copie manualmente"
   }
 }

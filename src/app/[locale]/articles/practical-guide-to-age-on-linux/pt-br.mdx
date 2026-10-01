@@ -64,7 +64,7 @@ ls -l ~/.config/age/key.txt
 
 Por dentro, o `key.txt` tem só três linhas:
 
-```
+```text
 # created: 2026-10-01T09:31:13-03:00
 # public key: age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4
 AGE-SECRET-KEY-1QUS6JV3SG65QCQHVHNVN4CEGY5QJKWVUDDMEYX067HVR5Y45LD0Q926WJ2
@@ -234,7 +234,7 @@ A senha nunca aparece na tela nem pode ser passada como argumento. Isso é propo
 
 ### O cabeçalho muda
 
-```
+```text
 age-encryption.org/v1
 -> scrypt 8CmxPV7t2hEFpbJXxmtuKQ 18
 luCBRo3+FegXbAvg5C1qn4K35ldq1S1xMQACKoG91Ms
@@ -307,7 +307,7 @@ Linhas vazias e linhas com `#` são ignoradas, então dá para documentar de que
 
 O cabeçalho agora tem **dois envelopes**, um para cada chave, ambos contendo a mesma file key:
 
-```
+```text
 age-encryption.org/v1
 -> X25519 CEWWVmjfNsH6CV2r8mo41d9yWWthHXgtjdfYfmjxuW0     <- envelope 1
 XJLtj5tF6HfQetjxYo5aLY9xoiWVE6IdEngR/enCeLY
@@ -406,7 +406,7 @@ O arquivo sai criptografado para todas as chaves que a pessoa tem cadastradas, e
 
 ### O que muda no arquivo, e por que isso importa
 
-```
+```text
 age-encryption.org/v1
 -> ssh-ed25519 nQeBCQ VG6b+02qyQ27wq/sBjnKf8UA6eQxkH/ScBHfnrQbDiQ
 2CSuE4Z+V0OhaekPTwgePe1EYcocZNk4tkkNuq9D8Hk
@@ -474,7 +474,7 @@ Confirm passphrase:
 
 O arquivo resultante é um `.age` comum com stanza `scrypt`:
 
-```
+```text
 age-encryption.org/v1
 -> scrypt sa5OxAPP8cKFzORwhMpNMQ 18
 JHJelDmEZGXtmSrJQJmJgsIrauj9WPd90jGiGm50CmM
@@ -523,7 +523,7 @@ age -d -i ~/.config/age/key-pq.txt pq.age
 
 O cabeçalho agora tem a stanza `mlkem768x25519`, o híbrido de ML-KEM-768 (pós-quântico, padronizado pelo NIST) com X25519 (clássico). Para quebrar, um atacante precisa vencer **os dois**.
 
-```
+```text
 age-encryption.org/v1
 -> mlkem768x25519 1GfS0gGndg60MDBCj2Ejhb7MXTmGCfzBJsJCR3UCs7aqMuHl/0A/FqWcUdH4cXG/...
 ```

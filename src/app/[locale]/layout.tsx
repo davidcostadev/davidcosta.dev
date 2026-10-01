@@ -1,6 +1,7 @@
 import { GoogleAnalytics } from '@next/third-parties/google';
 
-import { Volkhov, Lato, Fira_Code } from 'next/font/google';
+import { Volkhov, Lato } from 'next/font/google';
+import localFont from 'next/font/local';
 
 import { unstable_setRequestLocale, getMessages } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
@@ -30,11 +31,31 @@ const lato = Lato({
   variable: '--font-lato',
 });
 
-const firaCode = Fira_Code({
-  subsets: ['latin'],
+const commitMono = localFont({
+  src: [
+    {
+      path: '../../../node_modules/@fontsource/commit-mono/files/commit-mono-latin-400-normal.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../../node_modules/@fontsource/commit-mono/files/commit-mono-latin-400-italic.woff2',
+      weight: '400',
+      style: 'italic',
+    },
+    {
+      path: '../../../node_modules/@fontsource/commit-mono/files/commit-mono-latin-700-normal.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../../../node_modules/@fontsource/commit-mono/files/commit-mono-latin-700-italic.woff2',
+      weight: '700',
+      style: 'italic',
+    },
+  ],
   display: 'swap',
-  weight: ['400', '700'],
-  variable: '--font-fira-code',
+  variable: '--font-code',
 });
 
 export const metadata: Metadata = {
@@ -66,7 +87,7 @@ export default async function RootLayout({ children, params: { locale } }: Layou
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg relative ${volkhov.variable} ${lato.variable} ${firaCode.variable}`}
+        className={`antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg relative ${volkhov.variable} ${lato.variable} ${commitMono.variable}`}
         suppressHydrationWarning
       >
         <NextIntlClientProvider messages={messages} locale={locale}>

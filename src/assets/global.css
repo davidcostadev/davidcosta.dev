@@ -26,3 +26,11 @@
 article header + h2[class] {
   margin-top: 0.8rem;
 }
+
+/* Purple text selection across the site (code blocks use the same color, see prism.css) */
+::selection {
+  background: rgba(130, 80, 223, 0.2);
+}
+.dark ::selection {
+  background: rgba(179, 146, 240, 0.3);
+}
