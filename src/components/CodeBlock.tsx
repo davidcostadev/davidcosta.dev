@@ -18,49 +18,61 @@ const TOAST_DURATION = 2000;
 type CopyStatus = 'copied' | 'copyFailed' | null;
 
 /**
- * "Show whitespace" is one setting for every block on the site, remembered in
+ * A code block preference shared by every block on the site, remembered in
  * localStorage and kept in sync across blocks and tabs. Memory is the source of
  * truth, so the toggle still works when storage is unavailable.
  */
-const WHITESPACE_KEY = 'codeBlock.showWhitespace';
-const whitespaceListeners = new Set<() => void>();
-let showWhitespace: boolean | undefined;
+function createGlobalSetting(key: string, defaultValue: boolean) {
+  const listeners = new Set<() => void>();
+  let value: boolean | undefined;
 
-function readWhitespace() {
-  try {
-    return localStorage.getItem(WHITESPACE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
+  const parse = (stored: string | null) => (stored === null ? defaultValue : stored === 'true');
 
-function getWhitespace() {
-  showWhitespace ??= readWhitespace();
-  return showWhitespace;
-}
-
-function setWhitespace(value: boolean) {
-  showWhitespace = value;
-  try {
-    localStorage.setItem(WHITESPACE_KEY, String(value));
-  } catch {
-    // Storage blocked: the setting lasts until the page is reloaded
-  }
-  whitespaceListeners.forEach((listener) => listener());
-}
-
-function subscribeWhitespace(listener: () => void) {
-  const onStorage = (event: StorageEvent) => {
-    if (event.key !== WHITESPACE_KEY) return;
-    showWhitespace = event.newValue === 'true';
-    listener();
+  const get = () => {
+    if (value === undefined) {
+      try {
+        value = parse(localStorage.getItem(key));
+      } catch {
+        value = defaultValue;
+      }
+    }
+    return value;
   };
-  whitespaceListeners.add(listener);
-  window.addEventListener('storage', onStorage);
-  return () => {
-    whitespaceListeners.delete(listener);
-    window.removeEventListener('storage', onStorage);
+
+  const set = (next: boolean) => {
+    value = next;
+    try {
+      localStorage.setItem(key, String(next));
+    } catch {
+      // Storage blocked: the setting lasts until the page is reloaded
+    }
+    listeners.forEach((listener) => listener());
   };
+
+  const subscribe = (listener: () => void) => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== key) return;
+      value = parse(event.newValue);
+      listener();
+    };
+    listeners.add(listener);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      listeners.delete(listener);
+      window.removeEventListener('storage', onStorage);
+    };
+  };
+
+  return { get, set, subscribe, getServer: () => defaultValue };
+}
+
+type GlobalSetting = ReturnType<typeof createGlobalSetting>;
+
+const wrapSetting = createGlobalSetting('codeBlock.wrap', false);
+const whitespaceSetting = createGlobalSetting('codeBlock.showWhitespace', true);
+
+function useGlobalSetting({ subscribe, get, getServer, set }: GlobalSetting) {
+  return [useSyncExternalStore(subscribe, get, getServer), set] as const;
 }
 
 /** Clipboard API first; falls back to execCommand where it's unavailable or denied. */
@@ -158,9 +170,9 @@ export function CodeBlock({ className = '', children, ...props }: ComponentProps
   const t = useTranslations('codeBlock');
   const preRef = useRef<HTMLPreElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [wrap, setWrap] = useState(false);
+  const [wrap, setWrap] = useGlobalSetting(wrapSetting);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>(null);
-  const whitespace = useSyncExternalStore(subscribeWhitespace, getWhitespace, () => false);
+  const [whitespace, setWhitespace] = useGlobalSetting(whitespaceSetting);
 
   const lang = className.match(/language-(\S+)/)?.[1] ?? 'output';
   const isPlain = (PLAIN_LANGS as readonly string[]).includes(lang);
@@ -187,7 +199,7 @@ export function CodeBlock({ className = '', children, ...props }: ComponentProps
         <div className="code-block__actions">
           <ActionButton
             label={wrap ? t('noWrap') : t('wrap')}
-            onClick={() => setWrap((value) => !value)}
+            onClick={() => setWrap(!wrap)}
             aria-pressed={wrap}
           >
             <WrapIcon />

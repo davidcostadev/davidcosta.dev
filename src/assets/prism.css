@@ -12,7 +12,7 @@ html {
   --code-inline-bg: #e5e9f0;
   --code-inline-border: #d8dee9;
   --code-selection: rgba(130, 80, 223, 0.2);
-  --code-whitespace: rgba(95, 107, 124, 0.5);
+  --code-whitespace: rgba(95, 107, 124, 0.28);
 
   --syntax-comment: #5f6b7c;
   --syntax-keyword: #b0434e;
@@ -33,7 +33,7 @@ html.dark {
   --code-inline-bg: #2d333b;
   --code-inline-border: #444c56;
   --code-selection: rgba(179, 146, 240, 0.3);
-  --code-whitespace: rgba(145, 152, 161, 0.45);
+  --code-whitespace: rgba(145, 152, 161, 0.22);
 
   --syntax-comment: #8b949e;
   --syntax-keyword: #e5838b;
