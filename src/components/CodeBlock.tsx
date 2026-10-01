@@ -9,7 +9,12 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckIcon, ClipboardIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import {
+  CheckIcon,
+  ClipboardIcon,
+  ExclamationCircleIcon,
+  NumberedListIcon,
+} from '@heroicons/react/24/outline';
 import { useTranslations } from 'next-intl';
 
 const PLAIN_LANGS = ['output', 'text'] as const;
@@ -68,6 +73,7 @@ function createGlobalSetting(key: string, defaultValue: boolean) {
 
 type GlobalSetting = ReturnType<typeof createGlobalSetting>;
 
+const lineNumbersSetting = createGlobalSetting('codeBlock.lineNumbers', false);
 const wrapSetting = createGlobalSetting('codeBlock.wrap', false);
 const whitespaceSetting = createGlobalSetting('codeBlock.showWhitespace', true);
 
@@ -165,11 +171,12 @@ function Toast({ status, message }: { status: Exclude<CopyStatus, null>; message
   );
 }
 
-/** Code block with a language label, line-wrap and whitespace toggles, and a copy button. */
+/** Code block with a language label, line number, wrap and whitespace toggles, and a copy button. */
 export function CodeBlock({ className = '', children, ...props }: ComponentProps<'pre'>) {
   const t = useTranslations('codeBlock');
   const preRef = useRef<HTMLPreElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [lineNumbers, setLineNumbers] = useGlobalSetting(lineNumbersSetting);
   const [wrap, setWrap] = useGlobalSetting(wrapSetting);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>(null);
   const [whitespace, setWhitespace] = useGlobalSetting(whitespaceSetting);
@@ -198,6 +205,13 @@ export function CodeBlock({ className = '', children, ...props }: ComponentProps
         <span className="code-block__label">{label}</span>
         <div className="code-block__actions">
           <ActionButton
+            label={lineNumbers ? t('hideLineNumbers') : t('showLineNumbers')}
+            onClick={() => setLineNumbers(!lineNumbers)}
+            aria-pressed={lineNumbers}
+          >
+            <NumberedListIcon aria-hidden="true" />
+          </ActionButton>
+          <ActionButton
             label={wrap ? t('noWrap') : t('wrap')}
             onClick={() => setWrap(!wrap)}
             aria-pressed={wrap}
@@ -223,6 +237,7 @@ export function CodeBlock({ className = '', children, ...props }: ComponentProps
       <pre
         ref={preRef}
         className={className}
+        data-line-numbers={lineNumbers || undefined}
         data-wrap={wrap || undefined}
         data-whitespace={whitespace || undefined}
         {...props}

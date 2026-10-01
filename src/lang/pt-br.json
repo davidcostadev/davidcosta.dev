@@ -30,6 +30,8 @@
     "copied": "Copiado para a área de transferência",
     "wrap": "Quebrar linhas longas",
     "noWrap": "Não quebrar linhas longas",
+    "showLineNumbers": "Mostrar números de linha",
+    "hideLineNumbers": "Ocultar números de linha",
     "showWhitespace": "Mostrar espaços e tabs",
     "hideWhitespace": "Ocultar espaços e tabs",
     "output": "output",

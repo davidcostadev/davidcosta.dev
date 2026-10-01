@@ -13,6 +13,7 @@ html {
   --code-inline-border: #d8dee9;
   --code-selection: rgba(130, 80, 223, 0.2);
   --code-whitespace: rgba(95, 107, 124, 0.28);
+  --code-line-number: rgba(95, 107, 124, 0.6);
 
   --syntax-comment: #5f6b7c;
   --syntax-keyword: #b0434e;
@@ -34,6 +35,7 @@ html.dark {
   --code-inline-border: #444c56;
   --code-selection: rgba(179, 146, 240, 0.3);
   --code-whitespace: rgba(145, 152, 161, 0.22);
+  --code-line-number: rgba(145, 152, 161, 0.5);
 
   --syntax-comment: #8b949e;
   --syntax-keyword: #e5838b;
@@ -209,6 +211,28 @@ pre[class*='language-'] {
     animation: none;
     transition: none;
   }
+}
+
+/* Line numbers: a CSS counter per .code-line, in a gutter sized by --line-digits
+   (set at build time). Each line is a block with the number hanging in its
+   padding, so wrapped lines stay indented and the numbers are never copied. */
+pre[data-line-numbers] code {
+  counter-reset: line;
+}
+pre[data-line-numbers] .code-line {
+  display: block;
+  position: relative;
+  padding-left: calc(var(--line-digits, 1) * 1ch + 2ch);
+}
+pre[data-line-numbers] .code-line::before {
+  counter-increment: line;
+  content: counter(line);
+  position: absolute;
+  left: 0;
+  width: calc(var(--line-digits, 1) * 1ch);
+  text-align: right;
+  color: var(--code-line-number);
+  user-select: none;
 }
 
 /* Show whitespace: a dot per space, an arrow per tab. Drawn by CSS only, so

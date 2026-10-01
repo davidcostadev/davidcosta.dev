@@ -30,6 +30,8 @@
     "copied": "Copied to clipboard",
     "wrap": "Wrap long lines",
     "noWrap": "Don't wrap long lines",
+    "showLineNumbers": "Show line numbers",
+    "hideLineNumbers": "Hide line numbers",
     "showWhitespace": "Show whitespace",
     "hideWhitespace": "Hide whitespace",
     "output": "output",

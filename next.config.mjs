@@ -35,6 +35,23 @@ const rehypePreLanguage = () => (tree) => {
   visit(tree);
 };
 
+// Stores the digit count of the last line number on <pre>, so the optional line
+// number gutter (drawn by CSS from rehype-prism-plus's .code-line spans) fits it.
+const rehypeLineDigits = () => (tree) => {
+  const visit = (node) => {
+    const code = node.tagName === 'pre' && node.children?.find((child) => child.tagName === 'code');
+    if (code) {
+      const lines = code.children.filter((child) =>
+        child.properties?.className?.includes('code-line'),
+      ).length;
+      node.properties.style = `--line-digits: ${String(Math.max(lines, 1)).length}`;
+      return;
+    }
+    node.children?.forEach(visit);
+  };
+  visit(tree);
+};
+
 // Wraps spaces and tabs inside code blocks so CodeBlock's "show whitespace"
 // toggle can draw them with CSS. The characters stay in the text, so copying
 // and layout are unchanged. Spaces are wrapped per run, tabs one by one,
@@ -84,7 +101,12 @@ const withMDX = mdxfrom({
     commonmark: true,
     gfm: true,
     remarkPlugins: [remarkGfm, remarkPlainCode, remarkFrontmatter, remarkMdxFrontmatter],
-    rehypePlugins: [[rehypePrism, { ignoreMissing: true }], rehypePreLanguage, rehypeWhitespace],
+    rehypePlugins: [
+      [rehypePrism, { ignoreMissing: true }],
+      rehypePreLanguage,
+      rehypeLineDigits,
+      rehypeWhitespace,
+    ],
     // If you use `MDXProvider`, uncomment the following line.
     // providerImportSource: '@mdx-js/react',
   },
