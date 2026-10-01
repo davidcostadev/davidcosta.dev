@@ -42,5 +42,8 @@
     "toc": "On this page",
     "updated": "Updated",
     "opensInNewTab": "opens in a new tab"
+  },
+  "common": {
+    "backToTop": "Back to top"
   }
 }

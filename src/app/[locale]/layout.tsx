@@ -14,6 +14,7 @@ import { Metadata, Viewport } from 'next';
 
 import { locales } from 'config';
 
+import { BackToTop } from 'components/BackToTop';
 import { Footer } from 'components/Footer';
 import { Navbar } from 'components/Navbar';
 
@@ -96,6 +97,7 @@ export default async function RootLayout({ children, params }: LayoutProps) {
               <Navbar />
               {children}
               <Footer />
+              <BackToTop />
             </ThemeProvider>
           </LanguageProvider>
         </NextIntlClientProvider>
