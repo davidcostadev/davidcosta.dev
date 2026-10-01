@@ -3,6 +3,7 @@
 // import rehypeHighlight from 'rehype-highlight';
 import mdxfrom from '@next/mdx';
 import remarkPrism from 'remark-prism';
+import remarkGfm from 'remark-gfm';
 
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
@@ -19,6 +20,7 @@ const withMDX = mdxfrom({
     commonmark: true,
     gfm: true,
     remarkPlugins: [
+      remarkGfm,
       [
         remarkPrism,
         {

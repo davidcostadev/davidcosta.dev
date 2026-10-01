@@ -1,0 +1,716 @@
+## Before you start
+
+age encrypts files with a single command line and keys that fit on one line of text. This guide shows every command actually running, the output it prints, and what happens under the hood.
+
+All outputs below were captured with age v1.3.2 on Linux. The keys shown were generated just for this article and have already been thrown away: never publish yours.
+
+### Installation
+
+On Ubuntu, the package comes straight from the repository:
+
+```bash
+sudo apt install age
+age --version
+```
+
+```
+1.1.1
+```
+
+Notice the version. Ubuntu's repository usually lags behind the official release, and features like post-quantum keys (`-pq`) and the `age-inspect` command only exist from v1.3.0 onward. To get the latest version, download the official binary:
+
+```bash
+curl -L -o age.tar.gz "https://dl.filippo.io/age/latest?for=linux/amd64"
+tar xzf age.tar.gz
+sudo install age/age age/age-keygen age/age-inspect /usr/local/bin/
+age --version
+```
+
+```
+v1.3.2
+```
+
+The package installs a few commands. The ones that matter day to day:
+
+| Command | What it does |
+| --- | --- |
+| `age` | Encrypts and decrypts |
+| `age-keygen` | Generates keys and extracts the public key from a private one |
+| `age-inspect` | Shows information about a `.age` file without opening it (v1.3.0+) |
+
+## 1. Generating your keys
+
+Everything starts with a key pair: the **private** key (yours, secret) and the **public** key (the one you hand out). Anyone with the public key can lock files for you; only the private key unlocks them.
+
+```bash
+mkdir -p ~/.config/age
+chmod 700 ~/.config/age
+age-keygen -o ~/.config/age/key.txt
+```
+
+```
+Public key: age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4
+```
+
+**What happened:** `age-keygen` drew 32 random bytes (the X25519 private key), computed the matching public key, wrote everything to `key.txt` and printed the public key to the screen. The file is created with `600` permissions (only you can read it):
+
+```bash
+ls -l ~/.config/age/key.txt
+```
+
+```
+-rw------- 1 david david 189 Oct  1 09:31 key.txt
+```
+
+Inside, `key.txt` has only three lines:
+
+```
+# created: 2026-10-01T09:31:13-03:00
+# public key: age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4
+AGE-SECRET-KEY-1QUS6JV3SG65QCQHVHNVN4CEGY5QJKWVUDDMEYX067HVR5Y45LD0Q926WJ2
+```
+
+- Lines starting with `#` are comments: creation date and the public key, for reference.
+- The `AGE-SECRET-KEY-1...` line is **the entire private key**. Whoever has that line can open all your files.
+- The format is Bech32 (the same one used in Bitcoin addresses): it has a built-in checksum, so a mistyped character is detected instead of silently producing a different key.
+
+### Recovering the public key later
+
+Lost your `age1...`? It's derived from the private key, so you can recompute it at any time:
+
+```bash
+age-keygen -y ~/.config/age/key.txt
+```
+
+```
+age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4
+```
+
+### Overwrite protection
+
+`age-keygen` refuses to overwrite an existing key, which keeps you from losing it by accident:
+
+```bash
+age-keygen -o ~/.config/age/key.txt
+```
+
+```
+age-keygen: error: failed to open output file "key.txt": open key.txt: file exists
+```
+
+Without `-o`, it prints the new key to the screen instead of writing it, which is handy for piping it straight into another command (we'll see this in section 8).
+
+## 2. Encrypting and decrypting a file
+
+Let's create a file with something sensitive and lock it to our own public key.
+
+```bash
+printf 'Wifi password: banana123\nSafe box PIN: 4271\n' > notes.txt
+
+age -r age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4 \
+    -o notes.txt.age notes.txt
+```
+
+Nothing shows up on screen. In the UNIX world, silence means success.
+
+- `-r` (recipient) says **who** you're encrypting for: the public key.
+- `-o` (output) is the output file. Without it, the result goes to standard output.
+- The last argument is the input. Without it, age reads from standard input (which is why it works in pipes).
+
+### What happened under the hood
+
+1. age drew a 16-byte **file key**, unique to this file.
+2. It generated a throwaway key pair, did an X25519 key agreement with your public key, and used the result to lock the file key. That "envelope" is the **stanza**.
+3. It computed a seal (HMAC) over the header, to detect tampering.
+4. It encrypted the content with ChaCha20-Poly1305, in 64 KiB chunks.
+
+### What a .age file looks like inside
+
+The header is readable text; only the content is binary:
+
+```bash
+head -c 200 notes.txt.age
+```
+
+```
+age-encryption.org/v1                                   <- format version
+-> X25519 s9NpeNrYYto2vMS96IR5GbM2oP+bXmN53bgC6wdiDUA   <- stanza: type + throwaway key
+VzNEka0tpZrzqf57D5qJxRAA/Kja1jrc+v7l36mjlfI             <- locked file key
+--- fxUc7YAlZIygGc+opSRyP0PfK7qEGzFfLpTQkWMtREU         <- header seal (MAC)
+�'L`5&�"0�.�)���:6�>6�l ...                             <- encrypted content
+```
+
+The arrows and comments on the right were added for explanation; they're not part of the file.
+
+An important detail: **the header doesn't say which key the file was encrypted to**. It only says it's X25519. Someone who intercepts the file can't tell it's yours.
+
+### Size
+
+```bash
+ls -l notes.txt notes.txt.age
+```
+
+```
+-rw-r--r-- 1 david david  44 Oct  1 09:31 notes.txt
+-rw-r--r-- 1 david david 244 Oct  1 09:31 notes.txt.age
+```
+
+The extra 200 bytes are fixed: 168 for the header, 16 for the nonce and 16 for the authentication tag. For a 1 GB file, the overhead is negligible (16 bytes per 64 KiB).
+
+### Decrypting
+
+```bash
+age -d -i ~/.config/age/key.txt -o notes.txt notes.txt.age
+cat notes.txt
+```
+
+```
+Wifi password: banana123
+Safe box PIN: 4271
+```
+
+- `-d` (decrypt) reverses the operation.
+- `-i` (identity) points to the **private** key. You can repeat `-i` with several keys; age tries all of them.
+
+To just read it without writing to disk, leave out `-o`. The text goes to the screen or to another program:
+
+```bash
+age -d -i ~/.config/age/key.txt notes.txt.age | less
+```
+
+### Errors you'll run into
+
+**Wrong key:**
+
+```
+age: error: no identity matched any of the recipients
+```
+
+None of the keys passed with `-i` can open any envelope in the header.
+
+**Modified or corrupted file** (I changed a single byte at the end):
+
+```
+age: error: failed to decrypt and authenticate payload chunk, file may be corrupted or tampered with
+```
+
+age never silently hands you tampered content: if a byte changed, it stops.
+
+**Sending binary to the terminal** (forgot `-o`):
+
+```
+age: error: refusing to output binary to the terminal
+age: hint: did you mean to use -a/--armor?
+age: hint: force anyway with "-o -"
+```
+
+Protection against flooding your screen with binary garbage. Use `-o file`, a pipe, or `-a` (section 7).
+
+**Watch out:** age **overwrites** the `-o` file without asking, and **doesn't delete** the original. After encrypting, `notes.txt` is still there in plain text until you remove it.
+
+## 3. Using a passphrase instead of a key
+
+To send a file to someone who doesn't have an age key, or to protect something quickly, use `-p`. No key needs to be generated beforehand.
+
+```bash
+age -p -o secret.age notes.txt
+```
+
+```
+Enter passphrase (leave empty to autogenerate a secure one):
+age: using autogenerated passphrase "erase-resource-child-candy-example-pear-pave-finish-social-cinnamon"
+```
+
+**What happened:** I pressed Enter without typing anything and age generated a passphrase of 10 random words. It's strong (about 100 bits of entropy) and easier to read over the phone than a string of symbols. Copy it to your password manager: it won't be shown again.
+
+If you'd rather type your own, age asks for it twice:
+
+```
+Enter passphrase (leave empty to autogenerate a secure one):
+Confirm passphrase:
+```
+
+The passphrase never appears on screen and can't be passed as an argument. That's on purpose: an argument would end up in your shell history and be visible in `ps` to other users.
+
+### The header changes
+
+```
+age-encryption.org/v1
+-> scrypt 8CmxPV7t2hEFpbJXxmtuKQ 18
+luCBRo3+FegXbAvg5C1qn4K35ldq1S1xMQACKoG91Ms
+--- NzEnS4EHMGRzBfGkjTORkJ7K10upGbpyJXsEy8MQm6U
+```
+
+The stanza is now `scrypt`. The two values are the random **salt** and the **work factor** 18, meaning 2^18 scrypt iterations. That's what makes each passphrase guess cost memory and time, making brute force expensive.
+
+### Opening it
+
+No `-i` needed: age sees from the header that it's a passphrase and asks for it.
+
+```bash
+age -d secret.age
+```
+
+```
+Enter passphrase:
+Wifi password: banana123
+Safe box PIN: 4271
+```
+
+Wrong passphrase:
+
+```
+age: error: incorrect passphrase
+```
+
+### Limitation
+
+Passphrases and keys don't mix in the same file:
+
+```
+age: error: -p/--passphrase can't be combined with -r/--recipient
+```
+
+A passphrase-protected file has exactly one passphrase and no other recipients. To share with several people, use keys (next section).
+
+## 4. Multiple recipients
+
+The same file can be opened by several keys. Just repeat `-r`:
+
+```bash
+age -r age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4 \
+    -r age18cmdfem3afacqvmmaqajevjykjwqjvqh4rvxsmq3p66af2nk83hs2p2u8n \
+    -o multi.age notes.txt
+```
+
+With many keys, the line becomes unreadable. It's better to keep the public keys in a file and use `-R` (uppercase):
+
+```bash
+cat ~/.config/age/recipients.txt
+```
+
+```
+# David (laptop)
+age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4
+
+# Backup server
+age18cmdfem3afacqvmmaqajevjykjwqjvqh4rvxsmq3p66af2nk83hs2p2u8n
+```
+
+```bash
+age -R ~/.config/age/recipients.txt -o multi.age notes.txt
+```
+
+Empty lines and lines starting with `#` are ignored, so you can document whose key is whose. This file only contains public keys: it can go into git without any problem.
+
+### What changes in the file
+
+The header now has **two envelopes**, one per key, both containing the same file key:
+
+```
+age-encryption.org/v1
+-> X25519 CEWWVmjfNsH6CV2r8mo41d9yWWthHXgtjdfYfmjxuW0     <- envelope 1
+XJLtj5tF6HfQetjxYo5aLY9xoiWVE6IdEngR/enCeLY
+-> X25519 +tqbJAovTLWwj0tRCVw3e8ppTkAPHlOb0Z6VQIMGBEE     <- envelope 2
+LsG4O64UFy26E208VtQLOO8IdgBwlTyb7ilYfi4IKwc
+--- sqKMheXQyjVDCDUAZrb6h1Ier1sSej4Yft5yy72mm+s
+```
+
+The content is encrypted **only once**. Each extra recipient costs only about 100 bytes of header, regardless of file size: the 44-byte file went from 244 to 342 bytes.
+
+When opening, each person uses their own key and age tries the envelopes until it finds theirs:
+
+```bash
+age -d -i server-key.txt multi.age
+```
+
+```
+Wifi password: banana123
+Safe box PIN: 4271
+```
+
+This is the mechanism behind a backup strategy with a recovery key: always encrypt to your everyday key **and** to a key stored offline.
+
+## 5. Whole folders with tar and pipes
+
+age encrypts **a stream of bytes**, not folders. For a folder, bundle everything with `tar` and pass the result straight to age through a pipe (`|`):
+
+```bash
+tar czf - ~/Documents | age -R ~/.config/age/recipients.txt > documents.tar.gz.age
+```
+
+Reading left to right:
+
+1. `tar czf - ~/Documents` packs (`c`), compresses with gzip (`z`) and writes to the file `-`, which means standard output.
+2. `|` connects that output to age's input.
+3. `age -R ...` encrypts whatever arrives, without knowing or caring that it's a tar.
+4. `>` writes the result to disk.
+
+**Why a pipe and not two steps?** If you ran `tar czf docs.tar.gz` and then `age docs.tar.gz`, a complete, readable copy of your documents would be written to disk, even if only for a few seconds. On an SSD, deleting it afterwards doesn't guarantee the data is gone. With a pipe, the plaintext only ever exists in memory.
+
+Another advantage: age processes data in 64 KiB chunks, so a 50 GB folder doesn't need to fit in memory.
+
+### Restoring
+
+The reverse path: age decrypts and hands it over to tar to extract.
+
+```bash
+age -d -i ~/.config/age/key.txt documents.tar.gz.age | tar xzvf -
+```
+
+```
+Documents/
+Documents/notes.txt
+Documents/contract.pdf
+```
+
+tar's `v` lists each extracted file. To just see what's in the backup without extracting, swap `x` for `t`:
+
+```bash
+age -d -i ~/.config/age/key.txt documents.tar.gz.age | tar tzf -
+```
+
+This same pattern works with anything that writes to standard output: `pg_dump`, `mysqldump`, `docker save`, `zfs send`. For example, a database dump encrypted on the fly:
+
+```bash
+pg_dump my_database | age -R recipients.txt > db-$(date +%F).sql.age
+```
+
+## 6. Using the SSH keys you already have
+
+If you already have an SSH key, age accepts it in place of an age key. The public key encrypts, the private key opens:
+
+```bash
+age -R ~/.ssh/id_ed25519.pub -o ssh.age notes.txt
+age -d -i ~/.ssh/id_ed25519 ssh.age
+```
+
+```
+Wifi password: banana123
+Safe box PIN: 4271
+```
+
+Notice I used `-R` with the `.pub` file: it's treated as a recipients file with one line. With `-r`, you'd pass the key contents in quotes.
+
+If your SSH private key has a passphrase, age asks for it when opening. `ssh-agent` is not supported.
+
+### Sending something to someone via GitHub
+
+GitHub publishes any user's SSH keys at `github.com/<username>.keys`. Combine that with `-R -` (read recipients from standard input):
+
+```bash
+curl -s https://github.com/username.keys | age -R - report.pdf > report.pdf.age
+```
+
+The file comes out encrypted to every key the person has registered, and any one of them can open it.
+
+### What changes in the file, and why it matters
+
+```
+age-encryption.org/v1
+-> ssh-ed25519 nQeBCQ VG6b+02qyQ27wq/sBjnKf8UA6eQxkH/ScBHfnrQbDiQ
+2CSuE4Z+V0OhaekPTwgePe1EYcocZNk4tkkNuq9D8Hk
+--- Js2SddA8dlfpSoncdyCEgVtKn9jgPyMaK7bzZrYs8no
+```
+
+`nQeBCQ` is a **tag derived from the public key**. It helps age find the right envelope quickly, but it has a side effect: I encrypted another file to the same key and the tag repeated (`nQeBCQ` again). Anyone holding several of your files can tell they were all encrypted to the same key, and anyone who knows your public key (which is on GitHub) can link them to you. This doesn't happen with `age1...` keys.
+
+**When to use SSH:** to send something one-off to someone who only has an SSH key. **When to avoid it:** for long-term file storage, because SSH keys are often rotated or discarded without anyone remembering that files depended on them, and SSH keys on a YubiKey can't be used to decrypt.
+
+## 7. Text format (armor)
+
+A regular `.age` file is binary, which breaks if you paste it into a chat, an email or a YAML file. The `-a` (armor) option produces the same thing encoded as text:
+
+```bash
+echo "token=abc123" | age -a -r age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4
+```
+
+```
+-----BEGIN AGE ENCRYPTED FILE-----
+YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBHaEhydE42Tm1WY2d6S1E3
+eTdEVnNZYmxtZ21CZkkvT1FtQk9sakl6YkhzCnpNcUMwOTNYc0lBV2tXNUVaWVht
+eVRTN05ONHJlWXQ1ZndlN0p6RzN2SjQKLS0tIFMyUHNlLytKeUVzNzA3OUhGQWFK
+U1N5dVU1aXVCWStlTEJhSUtwdmkrRlUKEkPt/tHuycOo+rAklxObxTCOogCoBydR
+blr/KSzvZsDBT76g+zMLQ9q1ATGs
+-----END AGE ENCRYPTED FILE-----
+```
+
+**What happened:** it's the same file as before, just run through Base64 and wrapped between the `BEGIN` and `END` lines (PEM format, the same as TLS certificates). If you decode the Base64, you'll find the `age-encryption.org/v1` header inside. The size grows by about 33%.
+
+To open it, you don't need to say it's armored: age detects it on its own.
+
+```bash
+age -d -i ~/.config/age/key.txt << 'EOF'
+-----BEGIN AGE ENCRYPTED FILE-----
+YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBHaEhydE42Tm1WY2d6S1E3
+...
+-----END AGE ENCRYPTED FILE-----
+EOF
+```
+
+```
+token=abc123
+```
+
+`<< 'EOF'` is a heredoc: everything up to the `EOF` line becomes the command's input. It's a practical way to paste a block you received in a chat straight into the terminal.
+
+**When to use it:** secrets in versioned config files, chat messages, text fields in a database. **When not to:** large files, because binary is smaller and faster.
+
+## 8. Protecting your own private key with a passphrase
+
+`key.txt` is plain text: whoever copies the file can use the key. If the key will live somewhere less trustworthy (a USB stick, the cloud, a shared server), you can lock it with a passphrase using age itself:
+
+```bash
+age-keygen | age -p -o ~/.config/age/key.age
+```
+
+```
+Public key: age1va6rkr2j3klf7qewphexy37wcy3ndnmkrnr2wnghv2yr5kvdwalspmex6j
+Enter passphrase (leave empty to autogenerate a secure one):
+Confirm passphrase:
+```
+
+**What happened:** `age-keygen` without `-o` sent the new key to standard output, and the pipe handed it straight to `age -p`, which encrypted it with a passphrase. The plaintext key **never touched the disk**. The public key shows up on screen (`age-keygen` prints it separately, on stderr): write it down, because recovering it later will require the passphrase.
+
+The resulting file is a regular `.age` with an `scrypt` stanza:
+
+```
+age-encryption.org/v1
+-> scrypt sa5OxAPP8cKFzORwhMpNMQ 18
+JHJelDmEZGXtmSrJQJmJgsIrauj9WPd90jGiGm50CmM
+```
+
+### Using it
+
+Pass `key.age` to `-i` as if it were a `key.txt`. age notices it's encrypted and asks for the passphrase:
+
+```bash
+age -d -i ~/.config/age/key.age file.age
+```
+
+```
+Enter passphrase for identity file "key.age":
+hi
+```
+
+**Is it worth it?** For your everyday key on a laptop with an encrypted disk, usually not: anyone who can read the file is already inside your session and can capture the passphrase too. It's worth it for **backup copies** of the key, which sit outside your direct control. It's the recommended way to keep the recovery key on a USB stick.
+
+## 9. Post-quantum keys
+
+Since v1.3.0, age generates keys that resist a future quantum computer. The risk they cover is someone storing your files today and breaking them 10 or 20 years from now.
+
+```bash
+age-keygen -pq -o ~/.config/age/key-pq.txt
+age-keygen -y ~/.config/age/key-pq.txt > recipient-pq.txt
+```
+
+```
+Public key: age1pq1hetmtqfse3la3nges4v4x5zu4qzj3t5fhmxeyfg6tsh4mz5ymtu9dj7tf2mv2ul...
+```
+
+The real output is **1,959 characters** on a single line (I cut it here). That's the main annoyance: the public key of the post-quantum algorithm ML-KEM is big. That's why the recommended flow is to save the public key to a file and use `-R`, instead of pasting it with `-r`.
+
+The private key, on the other hand, stays short (`AGE-SECRET-KEY-PQ-1...`), because it's just a seed the keys are derived from.
+
+### Using them
+
+Exactly as before:
+
+```bash
+age -R recipient-pq.txt -o pq.age notes.txt
+age -d -i ~/.config/age/key-pq.txt pq.age
+```
+
+The header now has the `mlkem768x25519` stanza, the hybrid of ML-KEM-768 (post-quantum, standardized by NIST) and X25519 (classic). To break it, an attacker has to defeat **both**.
+
+```
+age-encryption.org/v1
+-> mlkem768x25519 1GfS0gGndg60MDBCj2Ejhb7MXTmGCfzBJsJCR3UCs7aqMuHl/0A/FqWcUdH4cXG/...
+```
+
+### Costs and restrictions
+
+- **Size:** the header went from 168 to 1,627 bytes. Irrelevant for a multi-gigabyte backup, noticeable for a thousand small files.
+- **Doesn't mix with classic keys:**
+
+```
+age: error: incompatible recipients: can't mix post-quantum and classic recipients, or the file would be vulnerable to quantum computers
+```
+
+That makes sense: if one of the keys were classic, the quantum attacker would simply open that envelope. If you want a recovery key, it also has to be `-pq`.
+
+- **Passphrases are already post-quantum:** files encrypted with `-p` use only symmetric cryptography, which quantum computers can't practically break. `age-inspect` confirms this (next section).
+- **Version:** the age 1.1.x from Ubuntu's repository doesn't understand these keys. Whoever opens the file needs v1.3.0+, or the `age-plugin-pq` binary installed.
+
+## 10. Inspecting without opening
+
+`age-inspect` (v1.3.0+) reads only the header and tells you what can be known without the key. Useful for answering "what kind of key did I lock that 2024 backup with?".
+
+```bash
+age-inspect multi.age
+```
+
+```
+multi.age is an age file, version "age-encryption.org/v1".
+
+This file is encrypted to the following recipient types:
+  - "X25519"
+  - "X25519"
+
+This file does NOT use post-quantum encryption.
+
+Size breakdown (assuming it decrypts successfully):
+
+    Header                       266 bytes
+    Encryption overhead           32 bytes
+    Payload                       44 bytes
+                        -------------------
+    Total                        342 bytes
+
+Tip: for machine-readable output, use --json.
+```
+
+Reading the result:
+
+- **Recipient types:** one item per envelope. Two `X25519` = encrypted to two age keys. Note that it shows the type, but **not which key**: that information doesn't exist in the file.
+- **Post-quantum:** whether the file resists a quantum computer.
+- **Size breakdown:** header, overhead (16 bytes of nonce + 16 of authentication per 64 KiB chunk) and the size of the original content. You can learn the exact plaintext size without opening it.
+
+Comparing the files created in this guide:
+
+| File | Recipient type | Post-quantum | Header |
+| --- | --- | --- | --- |
+| `notes.txt.age` | X25519 | No | 168 bytes |
+| `multi.age` | X25519, X25519 | No | 266 bytes |
+| `secret.age` | scrypt | Yes | 150 bytes |
+| `pq.age` | mlkem768x25519 | Yes | 1,627 bytes |
+
+For scripts, `--json` returns the same thing in structured form:
+
+```bash
+age-inspect --json notes.txt.age
+```
+
+```json
+{
+    "version": "age-encryption.org/v1",
+    "postquantum": "no",
+    "armor": false,
+    "stanza_types": ["X25519"],
+    "sizes": {"header": 168, "overhead": 32, "min_payload": 44, "max_payload": 44}
+}
+```
+
+(Trimmed JSON; the real one also includes armor and padding fields.) One use case: scan the backups folder and list which files still aren't post-quantum.
+
+```bash
+for f in backups/*.age; do
+  age-inspect --json "$f" | grep -q '"postquantum": "no"' && echo "$f"
+done
+```
+
+## 11. Day-to-day shortcuts
+
+Typing `-R`, `-i` and paths every time gets old. Put this at the end of your `~/.bashrc` (or `~/.zshrc`):
+
+```bash
+# --- age ---
+export AGE_KEY="$HOME/.config/age/key.txt"
+export AGE_RECIPIENTS="$HOME/.config/age/recipients.txt"
+
+# enc file1 file2 ...  -> creates file1.age, file2.age
+enc() {
+  for f in "$@"; do
+    age -R "$AGE_RECIPIENTS" -o "$f.age" "$f" && echo "locked: $f.age"
+  done
+}
+
+# dec file1.age ...  -> recreates file1
+dec() {
+  for f in "$@"; do
+    [[ "$f" == *.age ]] || { echo "skipped (not .age): $f" >&2; continue; }
+    age -d -i "$AGE_KEY" -o "${f%.age}" "$f" && echo "opened: ${f%.age}"
+  done
+}
+
+# view file.age  -> shows the content without writing to disk
+view() { age -d -i "$AGE_KEY" "$1"; }
+
+# encdir folder  -> creates folder.tar.gz.age via pipe
+encdir() {
+  tar czf - "$1" | age -R "$AGE_RECIPIENTS" > "${1%/}.tar.gz.age" && echo "locked: ${1%/}.tar.gz.age"
+}
+```
+
+Reload with `source ~/.bashrc` and try it:
+
+```bash
+enc a.txt b.txt
+rm a.txt
+dec a.txt.age b.txt
+view a.txt.age
+encdir Documents/
+```
+
+```
+locked: a.txt.age
+locked: b.txt.age
+opened: a.txt
+skipped (not .age): b.txt
+a
+locked: Documents.tar.gz.age
+```
+
+`${f%.age}` is a bash expansion that strips the `.age` suffix from the name. The check in `dec` keeps you from overwriting a file by mistake when you pass the wrong name. Since `enc` uses `recipients.txt`, everything you lock is also encrypted to the recovery key, if it's listed there.
+
+## Summary
+
+| I want to... | Command |
+| --- | --- |
+| Generate a key | `age-keygen -o key.txt` |
+| See my public key | `age-keygen -y key.txt` |
+| Encrypt for myself | `age -R recipients.txt -o x.age x` |
+| Encrypt with a passphrase | `age -p -o x.age x` |
+| Open | `age -d -i key.txt -o x x.age` |
+| Just read, without writing | `age -d -i key.txt x.age` |
+| Whole folder | `tar czf - folder \| age -R recipients.txt > folder.tar.gz.age` |
+| Restore folder | `age -d -i key.txt folder.tar.gz.age \| tar xzf -` |
+| Text to paste | `age -a -r age1...` |
+| Passphrase-protected key | `age-keygen \| age -p -o key.age` |
+| Post-quantum | `age-keygen -pq -o key-pq.txt` |
+| Inspect | `age-inspect x.age` |
+
+Before trusting your data to age, check:
+
+- [ ] Key in `~/.config/age/` with `600` permissions, on an encrypted disk
+- [ ] `recipients.txt` with your everyday key **and** a recovery key stored offline
+- [ ] Key backup on paper or a USB stick, outside your home
+- [ ] Restore test done using only the backup
+- [ ] Pipes instead of intermediate plaintext files
+- [ ] Originals deleted after encrypting, when appropriate
+
+## Sources
+
+- [age repository on GitHub](https://github.com/FiloSottile/age)
+- [age v1 format specification](https://age-encryption.org/v1)
+- [age manual (man page)](https://filippo.io/age/age.1)
+
+import { ArticleWrapper } from '../ArticleWrapper';
+
+export const metadata = {
+  title: 'A practical guide to age on Linux',
+  date: '2026-10-01T12:00:00.000Z',
+  lang: 'en',
+  tags: ['linux', 'security', 'cryptography'],
+  description:
+    'How to encrypt files, folders and backups with age on Linux, with every command, its real output and what happens under the hood.',
+  keywords: ['age', 'encryption', 'linux', 'backup', 'post-quantum', 'ssh'],
+  authors: {
+    name: 'David Costa',
+  },
+  alternates: {
+    canonical: '/en/articles/practical-guide-to-age-on-linux',
+  },
+};
+
+export default ({ children }) => <ArticleWrapper meta={metadata}>{children}</ArticleWrapper>;
