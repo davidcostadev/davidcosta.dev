@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import ThemeSwitcher from '../components/ThemeSwitcher';
 import { TranslateSwitcher } from '../components/TranslateSwitcher';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 
 import { useTranslations } from 'next-intl';
@@ -10,6 +11,8 @@ import { useTranslations } from 'next-intl';
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const t = useTranslations();
+  // Article pages are wider on large screens; keep the navbar lined up with them
+  const isArticle = /^\/[^/]+\/articles\/[^/]+/.test(usePathname() ?? '');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -36,7 +39,12 @@ export const Navbar = () => {
         { 'shadow-md': isScrolled },
       )}
     >
-      <div className="max-w-4xl m-auto flex justify-between items-center h-[64px]">
+      <div
+        className={clsx(
+          'max-w-4xl m-auto flex justify-between items-center h-[64px]',
+          isArticle && 'xl:max-w-[76rem] 2xl:max-w-[79rem]',
+        )}
+      >
         <div className="font-title text-2xl font-medium">
           <Link
             href="/"

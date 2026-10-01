@@ -112,6 +112,7 @@ a[data-external]:focus-visible .external-link-icon {
   position: relative;
   max-height: calc(100vh - 8rem);
   overflow-y: auto;
+  scrollbar-width: thin;
   font-size: 14px;
   line-height: 1.4;
 }

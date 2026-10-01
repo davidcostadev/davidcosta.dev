@@ -20,8 +20,9 @@ export default async function RootLayout({
   setRequestLocale(locale);
 
   return (
-    <main className="px-5 sm:px-12 max-w-4xl mx-auto min-h-screen">
-      <article className="relative break-words text-primary-light dark:text-primary-dark font-normal">
+    // Article pages widen on large screens to fit the summary; the navbar matches
+    <main className="px-5 sm:px-12 max-w-4xl mx-auto min-h-screen xl:has-[.article-layout]:max-w-[76rem] xl:has-[.article-layout]:px-0 2xl:has-[.article-layout]:max-w-[79rem]">
+      <article className="break-words text-primary-light dark:text-primary-dark font-normal">
         {children}
       </article>
     </main>

@@ -43,22 +43,25 @@ export function ArticleWrapper({
   };
 
   return (
-    <>
-      {/* In the left margin on wide screens, spanning the article so it can stick */}
-      {toc.length > 1 && (
-        <aside className="absolute inset-y-0 right-full mr-6 hidden w-44 xl:block">
+    // Summary and article are centered together on wide screens, lined up with the
+    // navbar: the summary under the site name, the text ending under "Blog"
+    <div className="article-layout xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:gap-x-16 2xl:grid-cols-[18rem_minmax(0,1fr)] 2xl:gap-x-20">
+      <aside className="hidden xl:block">
+        {toc.length > 1 && (
           <div className="sticky top-24">
             <TableOfContents items={toc} />
           </div>
-        </aside>
-      )}
-      <ArticleHeader {...meta} />
-      {children}
-      <script
-        type="application/ld+json"
-        // Escape < so a </script> in the frontmatter can't close the tag early
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
-      />
-    </>
+        )}
+      </aside>
+      <div className="min-w-0">
+        <ArticleHeader {...meta} />
+        {children}
+        <script
+          type="application/ld+json"
+          // Escape < so a </script> in the frontmatter can't close the tag early
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+        />
+      </div>
+    </div>
   );
 }
