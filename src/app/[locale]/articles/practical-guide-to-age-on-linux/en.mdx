@@ -713,4 +713,8 @@ export const metadata = {
   },
 };
 
-export default ({ children }) => <ArticleWrapper meta={metadata}>{children}</ArticleWrapper>;
+export default ({ children }) => (
+  <ArticleWrapper meta={metadata} toc={toc}>
+    {children}
+  </ArticleWrapper>
+);

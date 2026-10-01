@@ -106,3 +106,40 @@ a[data-external]:hover .external-link-icon,
 a[data-external]:focus-visible .external-link-icon {
   opacity: 1;
 }
+
+/* Sticky summary of the article's sections, in the left margin on wide screens */
+.toc {
+  position: relative;
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.toc__title {
+  margin-bottom: 0.75rem;
+  @apply font-title text-secondary-light dark:text-secondary-dark;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.toc__link {
+  display: block;
+  padding: 0.25rem 0 0.25rem 0.75rem;
+  border-left: 2px solid var(--code-border);
+  @apply text-secondary-light dark:text-secondary-dark;
+  text-decoration: none;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+.toc__link--nested {
+  padding-left: 1.5rem;
+}
+.toc__link:hover {
+  @apply text-primary-light dark:text-primary-dark;
+}
+.toc__link[aria-current] {
+  border-left-color: var(--syntax-command);
+  color: var(--syntax-command);
+}

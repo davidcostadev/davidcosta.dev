@@ -54,4 +54,8 @@ export const metadata = {
 
 import { ArticleWrapper } from '../ArticleWrapper';
 
-export default ({ children }) => <ArticleWrapper meta={metadata}>{children}</ArticleWrapper>;
+export default ({ children }) => (
+  <ArticleWrapper meta={metadata} toc={toc}>
+    {children}
+  </ArticleWrapper>
+);

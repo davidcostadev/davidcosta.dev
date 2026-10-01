@@ -1,6 +1,9 @@
 import mdxfrom from '@next/mdx';
 import rehypePrism from 'rehype-prism-plus';
 import rehypeSlug from 'rehype-slug';
+import { valueToEstree } from 'estree-util-value-to-estree';
+import { toString } from 'hast-util-to-string';
+import { define } from 'unist-util-mdx-define';
 import remarkGfm from 'remark-gfm';
 
 import remarkFrontmatter from 'remark-frontmatter';
@@ -91,6 +94,25 @@ const rehypeWhitespace = () => (tree) => {
   visit(tree);
 };
 
+// Exports the article's h2 and h3 headings as `toc`, for the sticky summary next
+// to the article. Runs after rehype-slug, so every heading already has its id.
+const rehypeToc = () => (tree, file) => {
+  const toc = [];
+  const visit = (node) => {
+    if ((node.tagName === 'h2' || node.tagName === 'h3') && node.properties?.id) {
+      toc.push({
+        id: node.properties.id,
+        level: node.tagName === 'h2' ? 2 : 3,
+        text: toString(node),
+      });
+      return;
+    }
+    node.children?.forEach(visit);
+  };
+  visit(tree);
+  define(tree, file, { toc: valueToEstree(toc) });
+};
+
 const withNextIntl = createNextIntlPlugin();
 const withMDX = mdxfrom({
   // Optionally provide remark and rehype plugins
@@ -104,6 +126,7 @@ const withMDX = mdxfrom({
     remarkPlugins: [remarkGfm, remarkPlainCode, remarkFrontmatter, remarkMdxFrontmatter],
     rehypePlugins: [
       rehypeSlug,
+      rehypeToc,
       [rehypePrism, { ignoreMissing: true }],
       rehypePreLanguage,
       rehypeLineDigits,

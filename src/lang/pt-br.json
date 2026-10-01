@@ -39,6 +39,7 @@
     "copyFailed": "Não foi possível copiar, selecione o texto e copie manualmente"
   },
   "article": {
+    "toc": "Nesta página",
     "updated": "Atualizado em",
     "opensInNewTab": "abre em uma nova aba"
   }
