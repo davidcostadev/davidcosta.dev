@@ -1,5 +1,6 @@
 import type { MDXComponents } from 'mdx/types';
 
+import { ArticleLink } from 'components/ArticleLink';
 import { CodeBlock } from 'components/CodeBlock';
 import { HeadingLink } from 'components/HeadingLink';
 
@@ -103,7 +104,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     code: (props) => <code className="font-code px-1 py-px rounded-md " {...props} />,
     hr: (props) => <hr className="border-border-200 dark:border-white/10 mb-[1.6rem]" {...props} />,
     a: (props) => (
-      <a
+      <ArticleLink
         className="text-link-light-normal dark:text-link-dark-normal hover:text-link-light--hover dark:hover:text-link-dark--hover active:text-link-light -active dark:active:text-link-dark-active underline hover:no-underline"
         {...props}
       />

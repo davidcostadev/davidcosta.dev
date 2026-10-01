@@ -87,3 +87,22 @@ article header + h2[class] {
 .font-title.text-2xl {
   font-size: 1.3rem;
 }
+
+/* External article links: an arrow after the link on hover, laid over the
+   following space so the text never shifts */
+a[data-external] {
+  position: relative;
+}
+.external-link-icon {
+  position: absolute;
+  top: 0.1em;
+  right: -0.95em;
+  width: 0.75em;
+  height: 0.75em;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+a[data-external]:hover .external-link-icon,
+a[data-external]:focus-visible .external-link-icon {
+  opacity: 1;
+}

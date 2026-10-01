@@ -37,5 +37,8 @@
     "output": "output",
     "text": "text",
     "copyFailed": "Couldn't copy, select the text and copy it manually"
+  },
+  "article": {
+    "opensInNewTab": "opens in a new tab"
   }
 }
