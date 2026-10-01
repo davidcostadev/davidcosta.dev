@@ -9,6 +9,43 @@ import remarkFrontmatter from 'remark-frontmatter';
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 
 import createNextIntlPlugin from 'next-intl/plugin';
+
+// remark-prism HTML-escapes code blocks without a language into a text node,
+// so React escapes them again and quotes render as &quot;. Render those blocks
+// here, with the same markup remark-prism uses, before it can touch them.
+const remarkPlainCode = () => (tree) => {
+  const visit = (node) => {
+    node.children?.forEach((child, index) => {
+      if (child.type !== 'code' || child.lang) return visit(child);
+
+      const className = ['language-text'];
+      node.children[index] = {
+        type: 'plainCode',
+        data: {
+          hName: 'div',
+          hProperties: { className: ['remark-highlight'] },
+          hChildren: [
+            {
+              type: 'element',
+              tagName: 'pre',
+              properties: { className },
+              children: [
+                {
+                  type: 'element',
+                  tagName: 'code',
+                  properties: { className },
+                  children: [{ type: 'text', value: `${child.value}\n` }],
+                },
+              ],
+            },
+          ],
+        },
+      };
+    });
+  };
+  visit(tree);
+};
+
 const withNextIntl = createNextIntlPlugin();
 const withMDX = mdxfrom({
   // Optionally provide remark and rehype plugins
@@ -21,6 +58,7 @@ const withMDX = mdxfrom({
     gfm: true,
     remarkPlugins: [
       remarkGfm,
+      remarkPlainCode,
       [
         remarkPrism,
         {
