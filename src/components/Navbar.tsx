@@ -37,7 +37,7 @@ export const Navbar = () => {
       )}
     >
       <div className="max-w-4xl m-auto flex justify-between items-center h-[64px]">
-        <h1 className="font-title text-2xl font-medium">
+        <div className="font-title text-2xl font-medium">
           <Link
             href="/"
             className="text-primary hover:text-purple-400"
@@ -45,7 +45,7 @@ export const Navbar = () => {
           >
             {t('topbar.brand')}
           </Link>
-        </h1>
+        </div>
         <nav className="flex gap-5 items-center">
           <ThemeSwitcher />
           <TranslateSwitcher />

@@ -10,7 +10,7 @@ import 'assets/global.css';
 import 'assets/prism.css';
 import { ThemeProvider } from 'next-themes';
 import { LanguageProvider } from 'context/LanguageContext';
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 
 import { locales } from 'config';
 
@@ -51,6 +51,11 @@ const commitMono = localFont({
   display: 'swap',
   variable: '--font-code',
 });
+
+// Matches the default dark background; the theme is a manual toggle, not the system's
+export const viewport: Viewport = {
+  themeColor: '#161b22',
+};
 
 export const metadata: Metadata = {
   title: 'davidcosta.dev',

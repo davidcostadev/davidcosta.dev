@@ -25,12 +25,12 @@ export default async function Index({ params }: { params: Promise<{ locale: stri
       <div>
         <div className="max-w-3xl m-auto px-2 sm:px-6 -mt-16 z-10 relative mb-7">
           <div className="shadow-lg bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-10">
-            <h2 className="font-title text-secondary text-xl sm:text-2xl">
+            <h1 className="font-title text-secondary text-xl sm:text-2xl">
               <span className="text-primary text-3xl sm:text-[2.5rem] sm:leading-tight mb-2 inline-flex w-full">
                 {t('homepage.title')}
               </span>
               {t('homepage.subtitle')}
-            </h2>
+            </h1>
           </div>
         </div>
         <div className="max-w-3xl m-auto px-2 sm:px-6 mb-7">
