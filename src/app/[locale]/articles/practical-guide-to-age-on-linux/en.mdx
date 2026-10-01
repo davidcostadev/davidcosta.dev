@@ -2,7 +2,76 @@
 
 age encrypts files with a single command line and keys that fit on one line of text. This guide shows every command actually running, the output it prints, and what happens under the hood.
 
-All outputs below were captured with age v1.3.2 on Linux. The keys shown were generated just for this article and have already been thrown away: never publish yours.
+All outputs below were captured with age v1.3.2 on Linux (and, where they appear, OpenSSH's `ssh-keygen` and sops 3.13.3). The keys shown were generated just for this article and have already been thrown away: never publish yours.
+
+### Who makes age
+
+age (always written in lowercase) was designed by Filippo Valsorda ([@FiloSottile](https://github.com/FiloSottile)) and Ben Cox ([@benjojo](https://github.com/benjojo)). The pieces you'll run into:
+
+| What | Where |
+| --- | --- |
+| Format specification | [c2sp.org/age](https://c2sp.org/age) |
+| Reference implementation in Go (`age`, `age-keygen`, `age-inspect`) | [github.com/FiloSottile/age](https://github.com/FiloSottile/age) |
+| Official binaries | `dl.filippo.io/age` |
+| Rust implementation, fully compatible | [rage](https://github.com/str4d/rage) |
+| TypeScript implementation (browser, Node.js) | [typage](https://github.com/FiloSottile/typage) |
+| Plugins, tools and integrations | [awesome-age](https://github.com/FiloSottile/awesome-age) |
+
+Because the format is a public specification, a file made with `age` opens with `rage` and vice versa. For a tool you'll trust your data to, install it from these sources or from your distribution, not from a random mirror.
+
+### What age does, and what it doesn't
+
+age does one thing: encrypt files so that only the holders of certain keys can read them. If you've used GPG, the difference is scope. GPG (OpenPGP) also signs, keeps keyrings, has a web of trust and dozens of options. age has no configuration, no keyrings and no signatures. Fewer features means fewer ways to get it wrong, but it also means there's one thing age **doesn't** tell you: **who** created a file.
+
+Encrypting only takes the *public* key, which by design you hand out. So anyone who has it can create a file that opens cleanly with your private key. Here, a "message from someone else" encrypted to a key generated for this example:
+
+```bash
+echo 'Please wire the payment to account 99-1234.' \
+  | age -r age1kayung4jcqqar5m50l82jyd87zmkdz24fh7mcgqnwl963vmx696q79xdjk -o invoice.txt.age
+age -d -i key.txt invoice.txt.age
+```
+
+```
+Please wire the payment to account 99-1234.
+```
+
+No warning. age guarantees that nobody else can read the content and that nobody changed the file after it was created (section 2), but not that it came from whoever you expect. Passphrase files are the exception: only someone who knows the passphrase can create one (section 3).
+
+When authorship matters, sign the encrypted file. The `ssh-keygen` you already have does it:
+
+```bash
+ssh-keygen -Y sign -f ~/.ssh/id_ed25519 -n file report.age
+```
+
+```
+Signing file report.age
+Write signature to report.age.sig
+```
+
+Whoever receives it keeps an `allowed_signers` file with the keys they trust, one line per person (an identifier and the SSH public key):
+
+```text
+david@example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBqTqH...
+```
+
+And checks the signature before opening the file:
+
+```bash
+ssh-keygen -Y verify -f allowed_signers -I david@example.com -n file -s report.age.sig < report.age
+```
+
+```
+Good "file" signature for david@example.com with ED25519 key SHA256:BO8eWB7uElf7Lv2mWQSMgnFCQv4UKtc+3Z1pfxRL5WY
+```
+
+The same signature checked against the forged invoice:
+
+```
+Signature verification failed: incorrect signature
+Could not verify signature.
+```
+
+`-n file` is a namespace: a signature made for files can't be reused as, say, a git commit signature. If you'd rather not sign with SSH keys, [minisign](https://jedisct1.github.io/minisign/) does the same job.
 
 ### Installation
 
@@ -206,7 +275,7 @@ age: hint: force anyway with "-o -"
 
 Protection against flooding your screen with binary garbage. Use `-o file`, a pipe, or `-a` (section 7).
 
-**Watch out:** age **overwrites** the `-o` file without asking, and **doesn't delete** the original. After encrypting, `notes.txt` is still there in plain text until you remove it.
+**Watch out:** age **overwrites** the `-o` file without asking, and **doesn't delete** the original. After encrypting, `notes.txt` is still there in plain text until you remove it, and removing it properly takes more than `rm` (section 14).
 
 ## 3. Using a passphrase instead of a key
 
@@ -271,7 +340,7 @@ Passphrases and keys don't mix in the same file:
 age: error: -p/--passphrase can't be combined with -r/--recipient
 ```
 
-A passphrase-protected file has exactly one passphrase and no other recipients. To share with several people, use keys (next section).
+A passphrase-protected file has exactly one passphrase and no other recipients. The reason is in the specification: a passphrase file carries an implicit guarantee of authorship, since only someone who knows the passphrase could have created it. Adding a public key would break that, because anyone with the public key could create the file (see "What age does, and what it doesn't"). To share with several people, use keys (next section).
 
 ## 4. Multiple recipients
 
@@ -330,6 +399,8 @@ Safe box PIN: 4271
 ```
 
 This is the mechanism behind a backup strategy with a recovery key: always encrypt to your everyday key **and** to a key stored offline.
+
+The flip side: removing a key from `recipients.txt` only affects the files you create from then on. Files that already exist keep their envelope for that key (section 12).
 
 ## 5. Whole folders with tar and pipes
 
@@ -455,6 +526,48 @@ token=abc123
 `<< 'EOF'` is a heredoc: everything up to the `EOF` line becomes the command's input. It's a practical way to paste a block you received in a chat straight into the terminal.
 
 **When to use it:** secrets in versioned config files, chat messages, text fields in a database. **When not to:** large files, because binary is smaller and faster.
+
+### Secrets in git: sops
+
+For config files in a repository, the usual tool is [sops](https://github.com/getsops/sops), which uses age underneath. You declare who can read in a `.sops.yaml`:
+
+```yaml
+creation_rules:
+  - age: age1kayung4jcqqar5m50l82jyd87zmkdz24fh7mcgqnwl963vmx696q79xdjk
+```
+
+```bash
+sops encrypt --in-place secrets.yaml
+cat secrets.yaml
+```
+
+```
+database:
+    user: ENC[AES256_GCM,data:+Cbo,iv:jewOHvfShqtXjrFDgWXfo4Ox/wFlWjPjgzu9SJWe1tU=,tag:yc4HU9+iKEGCVGspYTf8HQ==,type:str]
+    password: ENC[AES256_GCM,data:BWALoqm5pg==,iv:UAyb4utFNLIdabUru/JQwzvs3lxm9J/NE5WVZbvIg9A=,tag:MWn1rA5pcd5Us0je9X1+9g==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBjVElXdWtLbzFrNEUxRlp2
+            ...
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1kayung4jcqqar5m50l82jyd87zmkdz24fh7mcgqnwl963vmx696q79xdjk
+```
+
+(Trimmed.) It's the envelope from section 2 again: sops encrypts the values with its own key and locks that key with age, in armor format. Only the values are encrypted: the names (`database`, `user`, `password`) stay readable, so git diffs still show what changed. That's convenient, and it's also metadata (section 11).
+
+To read it:
+
+```bash
+SOPS_AGE_KEY_FILE=~/.config/age/key.txt sops decrypt secrets.yaml
+```
+
+```
+database:
+    user: app
+    password: hunter2
+```
 
 ## 8. Protecting your own private key with a passphrase
 
@@ -609,7 +722,164 @@ for f in backups/*.age; do
 done
 ```
 
-## 11. Day-to-day shortcuts
+## 11. What an encrypted file still reveals
+
+age hides the content, not everything around it:
+
+```bash
+ls -l resignation-letter.txt.age
+age-inspect resignation-letter.txt.age
+```
+
+```
+-rw-rw-r-- 1 david david 238 Oct  1 18:47 resignation-letter.txt.age
+
+Size breakdown (assuming it decrypts successfully):
+
+    Header                       168 bytes
+    Encryption overhead           32 bytes
+    Payload                       38 bytes
+                        -------------------
+    Total                        238 bytes
+```
+
+(`age-inspect` output trimmed.)
+
+- **The name:** age doesn't touch it. `resignation-letter.txt.age` says plenty without being opened.
+- **The exact size:** the payload is exactly the 38 bytes of the original text, because age adds no padding (`"max_padding": 0` in `--json`). For short, predictable content (a yes or no, a PIN, one of a few known documents), the size alone can give it away.
+- **Dates and owner:** the usual filesystem metadata, like any other file.
+- **Who it's for, sometimes:** age keys leave no trace in the header, but SSH keys leave a tag (section 6), and so do hardware keys (section 13).
+
+When that matters, encrypt a bundle instead of individual files: `tar` plus age (section 5) leaves a single file with a neutral name, and the names, sizes and number of the files inside only show up after decrypting.
+
+## 12. When a key leaks
+
+age has no revocation. Each file keeps in its header an envelope for every key it was encrypted to, forever. If a private key leaks, every file ever encrypted to it can be opened, old backups included.
+
+Taking the key out of `recipients.txt` doesn't change files that already exist. Here, a secret encrypted to two keys (a laptop and an old server), after the server's key leaked and was removed from the list:
+
+```bash
+cat recipients.txt
+age -d -i old-server.txt secrets.age
+```
+
+```
+# laptop
+age14smdf4csaq89p6740gykhwsrn8gsl5zxprswsczsl8gj5zvsxckqensy50
+db password: hunter2
+```
+
+The fix is to re-encrypt to the current list. Do it through a pipe, so the plaintext never touches the disk:
+
+```bash
+age -d -i laptop.txt secrets.age | age -R recipients.txt -o secrets.age.new && mv secrets.age.new secrets.age
+age -d -i old-server.txt secrets.age
+```
+
+```
+age: error: no identity matched any of the recipients
+```
+
+The `&&` only replaces the file if the re-encryption worked.
+
+Re-encrypting only protects the copies you control. Any copy made earlier (a backup somewhere else, a file already in someone else's hands) still opens with the leaked key. So, in practice:
+
+1. Generate a new key and update `recipients.txt`.
+2. Re-encrypt the files you control.
+3. **Change the secrets themselves** (passwords, tokens) that were inside files the old key could open. Assume they've been read.
+
+## 13. Hardware keys and plugins
+
+So far the private key is a line of text in a file: whoever copies the file has the key. Section 8 puts a passphrase on it, but on a compromised machine the passphrase can be captured as you type it. Hardware keys solve the root problem: the private key is generated inside a chip and can't be extracted. Decrypting requires the device plugged in and, depending on its settings, a PIN or a touch.
+
+age doesn't talk to hardware itself. It delegates to **plugins**: separate programs named `age-plugin-<name>` that age finds in your `PATH` and calls when it sees a key of their type. The main ones:
+
+| Plugin | Hardware |
+| --- | --- |
+| [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey) | YubiKey and other PIV tokens |
+| [age-plugin-se](https://github.com/remko/age-plugin-se) | Apple's Secure Enclave, on Macs |
+| [age-plugin-tpm](https://github.com/Foxboron/age-plugin-tpm) | The TPM 2.0 chip in most PCs (experimental) |
+
+The flow with a YubiKey:
+
+1. `age-plugin-yubikey` generates the key inside the YubiKey and writes an **identity file**. Unlike `key.txt`, this file holds no secret: it only tells age which device and slot to use.
+2. The public key goes into `recipients.txt` like any other. Encrypting to it doesn't need the YubiKey: anyone can still lock files for you.
+3. To decrypt, pass the identity file to `-i`. age calls the plugin, and the plugin asks the YubiKey to open the envelope.
+
+I don't have a YubiKey at hand, so this section has no captured outputs; the plugin's README has the exact commands.
+
+Two cautions:
+
+- **Losing the device means losing the key.** There's no backup, and that's the point. Always encrypt to a second key too: a paper recovery key (section 14) or a second YubiKey.
+- **Hardware keys leave a tag**, like SSH keys (section 6). The specification says these recipient types let anyone holding the public key check whether a file was addressed to it.
+
+Plugins aren't only for hardware: `age-plugin-pq`, which ships with the official binaries, adds the post-quantum keys from section 9 to older versions and other implementations. And [passage](https://github.com/FiloSottile/passage), a password manager built on age, is often used exactly this way, with YubiKeys.
+
+## 14. Backing up your key, and testing the restore
+
+The checklist at the end asks for a key backup and a restore test. Here's how to do both.
+
+### On paper
+
+The private key is a single line, and that line is the whole backup:
+
+```bash
+grep -v '^#' ~/.config/age/key.txt
+```
+
+```
+AGE-SECRET-KEY-1WQ3AZLFDJMCPFR6YKKRD9VSD638GWR5V0T9G6WN8Q5VNTD9GL5SQMVX4VR
+```
+
+Print it or write it down by hand, and keep it outside your home. Copying it by hand is safer than it looks, thanks to Bech32 (section 1): after the prefix, the alphabet leaves out characters that are easy to confuse (`1`, `b`, `i` and `o`), and the checksum catches typos. With one wrong character:
+
+```
+age: error: reading "typo-key.txt": failed to read "typo-key.txt": error at line 1: malformed secret key: invalid checksum
+```
+
+One trap: type it back in **uppercase**. In lowercase, age doesn't recognize it:
+
+```
+age: error: reading "lower-key.txt": failed to read "lower-key.txt": error at line 1: unknown identity type
+```
+
+If you'd rather scan than type, [PaperAge](https://github.com/matiaskorhonen/paper-age) is a tool made for paper backups of secrets.
+
+### The restore test
+
+A backup you've never restored is a hope, not a backup. Test it with only what you'd have after losing the laptop: the recovery key from the paper. Type it into a new file and open the backup:
+
+```bash
+mkdir restore-test && cd restore-test
+nano key-from-paper.txt   # the line from the paper
+age -d -i key-from-paper.txt ../documents.tar.gz.age | tar xzf -
+```
+
+Then compare with the originals, byte for byte:
+
+```bash
+(cd .. && sha256sum Documents/*) > ../original.sha
+sha256sum -c ../original.sha
+```
+
+```
+Documents/contract.pdf: OK
+Documents/notes.txt: OK
+```
+
+When you're done, delete `restore-test`: `key-from-paper.txt` is your private key in plain text.
+
+### Deleting the original
+
+After encrypting, the original is still there in plain text (section 2), and `rm` only removes the name: the data stays on disk until something overwrites it. The classic tool is `shred`, but its own documentation warns that it relies on the filesystem overwriting data in place, which journaling, RAID, snapshots and compressed filesystems don't guarantee (copy-on-write ones like btrfs and ZFS neither). On an SSD, the drive itself decides where each write lands, so overwriting a file usually fills new cells and leaves the old ones intact. And a backup or snapshot may already hold a copy.
+
+What works in practice:
+
+1. **Full-disk encryption** (LUKS on Linux): whatever stays on the disk is unreadable anyway. This is the real protection.
+2. **Pipes** (section 5): plaintext that never touches the disk never needs deleting.
+3. **Then** a plain `rm` on the original.
+
+## 15. Day-to-day shortcuts
 
 Typing `-R`, `-i` and paths every time gets old. Put this at the end of your `~/.bashrc` (or `~/.zshrc`):
 
@@ -679,20 +949,29 @@ locked: Documents.tar.gz.age
 | Passphrase-protected key | `age-keygen \| age -p -o key.age` |
 | Post-quantum | `age-keygen -pq -o key-pq.txt` |
 | Inspect | `age-inspect x.age` |
+| Sign | `ssh-keygen -Y sign -f ~/.ssh/id_ed25519 -n file x.age` |
+| Check a signature | `ssh-keygen -Y verify -f allowed_signers -I email -n file -s x.age.sig < x.age` |
+| Re-encrypt after a key change | `age -d -i key.txt x.age \| age -R recipients.txt -o x.age.new` |
 
 Before trusting your data to age, check:
 
 - [ ] Key in `~/.config/age/` with `600` permissions, on an encrypted disk
 - [ ] `recipients.txt` with your everyday key **and** a recovery key stored offline
-- [ ] Key backup on paper or a USB stick, outside your home
-- [ ] Restore test done using only the backup
+- [ ] Key backup on paper or a USB stick, outside your home (section 14)
+- [ ] Restore test done using only the backup (section 14)
 - [ ] Pipes instead of intermediate plaintext files
-- [ ] Originals deleted after encrypting, when appropriate
+- [ ] Originals deleted after encrypting, on an encrypted disk (section 14)
+- [ ] Signatures on files whose authorship matters
+- [ ] A plan for a leaked key: re-encrypt and change the secrets (section 12)
 
 ## Sources
 
 - [age repository on GitHub](https://github.com/FiloSottile/age)
 - [age v1 format specification](https://age-encryption.org/v1)
+- [rage, the Rust implementation](https://github.com/str4d/rage)
+- [awesome-age: plugins, tools and integrations](https://github.com/FiloSottile/awesome-age)
+- [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey)
+- [sops](https://github.com/getsops/sops)
 - [age manual (man page)](https://filippo.io/age/age.1)
 
 import { ArticleWrapper } from '../ArticleWrapper';

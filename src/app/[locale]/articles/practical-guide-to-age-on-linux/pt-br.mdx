@@ -2,7 +2,76 @@
 
 O age criptografa arquivos com uma linha de comando e chaves de uma linha de texto. Este guia mostra cada comando rodando de verdade, o output que ele imprime e o que acontece por baixo.
 
-Todos os outputs abaixo foram capturados com o age v1.3.2 no Linux. As chaves que aparecem foram geradas só para este artigo e já foram descartadas: nunca publique a sua.
+Todos os outputs abaixo foram capturados com o age v1.3.2 no Linux (e, onde aparecem, com o `ssh-keygen` do OpenSSH e o sops 3.13.3). As chaves que aparecem foram geradas só para este artigo e já foram descartadas: nunca publique a sua.
+
+### Quem faz o age
+
+O age (sempre escrito em minúsculas) foi projetado por Filippo Valsorda ([@FiloSottile](https://github.com/FiloSottile)) e Ben Cox ([@benjojo](https://github.com/benjojo)). As peças que você vai encontrar:
+
+| O quê | Onde |
+| --- | --- |
+| Especificação do formato | [c2sp.org/age](https://c2sp.org/age) |
+| Implementação de referência em Go (`age`, `age-keygen`, `age-inspect`) | [github.com/FiloSottile/age](https://github.com/FiloSottile/age) |
+| Binários oficiais | `dl.filippo.io/age` |
+| Implementação em Rust, totalmente compatível | [rage](https://github.com/str4d/rage) |
+| Implementação em TypeScript (navegador, Node.js) | [typage](https://github.com/FiloSottile/typage) |
+| Plugins, ferramentas e integrações | [awesome-age](https://github.com/FiloSottile/awesome-age) |
+
+Como o formato é uma especificação pública, um arquivo criado com o `age` abre com o `rage` e vice-versa. Para uma ferramenta em que você vai confiar seus dados, instale a partir dessas fontes ou da sua distribuição, não de um mirror qualquer.
+
+### O que o age faz, e o que ele não faz
+
+O age faz uma coisa só: criptografa arquivos para que só quem tem certas chaves consiga ler. Se você já usou o GPG, a diferença é o escopo. O GPG (OpenPGP) também assina, mantém chaveiros, tem rede de confiança e dezenas de opções. O age não tem configuração, nem chaveiros, nem assinaturas. Menos recursos significa menos jeitos de errar, mas também significa que tem uma coisa que o age **não** diz: **quem** criou um arquivo.
+
+Para criptografar, basta a chave *pública*, que por definição você distribui. Então qualquer pessoa que tenha ela consegue criar um arquivo que abre normalmente com a sua chave privada. Aqui, uma "mensagem de outra pessoa" criptografada para uma chave gerada para este exemplo:
+
+```bash
+echo 'Please wire the payment to account 99-1234.' \
+  | age -r age1kayung4jcqqar5m50l82jyd87zmkdz24fh7mcgqnwl963vmx696q79xdjk -o invoice.txt.age
+age -d -i key.txt invoice.txt.age
+```
+
+```
+Please wire the payment to account 99-1234.
+```
+
+Nenhum aviso. O age garante que ninguém mais lê o conteúdo e que ninguém alterou o arquivo depois de criado (seção 2), mas não que ele veio de quem você espera. Arquivos com senha são a exceção: só quem conhece a senha consegue criar um (seção 3).
+
+Quando a autoria importa, assine o arquivo criptografado. O `ssh-keygen` que você já tem faz isso:
+
+```bash
+ssh-keygen -Y sign -f ~/.ssh/id_ed25519 -n file report.age
+```
+
+```
+Signing file report.age
+Write signature to report.age.sig
+```
+
+Quem recebe mantém um arquivo `allowed_signers` com as chaves em que confia, uma linha por pessoa (um identificador e a chave pública SSH):
+
+```text
+david@example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBqTqH...
+```
+
+E confere a assinatura antes de abrir o arquivo:
+
+```bash
+ssh-keygen -Y verify -f allowed_signers -I david@example.com -n file -s report.age.sig < report.age
+```
+
+```
+Good "file" signature for david@example.com with ED25519 key SHA256:BO8eWB7uElf7Lv2mWQSMgnFCQv4UKtc+3Z1pfxRL5WY
+```
+
+A mesma assinatura conferida contra a fatura forjada:
+
+```
+Signature verification failed: incorrect signature
+Could not verify signature.
+```
+
+O `-n file` é um namespace: uma assinatura feita para arquivos não pode ser reaproveitada, por exemplo, como assinatura de commit no git. Se você preferir não assinar com chaves SSH, o [minisign](https://jedisct1.github.io/minisign/) faz o mesmo papel.
 
 ### Instalação
 
@@ -206,7 +275,7 @@ age: hint: force anyway with "-o -"
 
 Proteção contra encher a tela de lixo binário. Use `-o arquivo`, um pipe, ou `-a` (seção 7).
 
-**Atenção:** o age **sobrescreve** o arquivo de `-o` sem perguntar, e **não apaga** o original. Depois de criptografar, `notas.txt` continua lá em texto puro até você removê-lo.
+**Atenção:** o age **sobrescreve** o arquivo de `-o` sem perguntar, e **não apaga** o original. Depois de criptografar, `notas.txt` continua lá em texto puro até você removê-lo, e removê-lo direito exige mais que um `rm` (seção 14).
 
 ## 3. Usando senha em vez de chave
 
@@ -271,7 +340,7 @@ Senha e chave não se misturam no mesmo arquivo:
 age: error: -p/--passphrase can't be combined with -r/--recipient
 ```
 
-Um arquivo com senha tem exatamente uma senha e nenhum outro destinatário. Para compartilhar com várias pessoas, use chaves (próxima seção).
+Um arquivo com senha tem exatamente uma senha e nenhum outro destinatário. O motivo está na especificação: um arquivo com senha traz uma garantia implícita de autoria, porque só quem conhece a senha poderia ter criado ele. Adicionar uma chave pública quebraria isso, porque qualquer pessoa com a chave pública poderia criar o arquivo (veja "O que o age faz, e o que ele não faz"). Para compartilhar com várias pessoas, use chaves (próxima seção).
 
 ## 4. Vários destinatários
 
@@ -330,6 +399,8 @@ PIN do cofre: 4271
 ```
 
 Esse é o mecanismo por trás da estratégia de backup com chave de recuperação: criptografe sempre para a chave do dia a dia **e** para uma chave guardada offline.
+
+O outro lado: tirar uma chave do `recipients.txt` só vale para os arquivos que você criar daí em diante. Os arquivos que já existem continuam com o envelope daquela chave (seção 12).
 
 ## 5. Pastas inteiras com tar e pipes
 
@@ -455,6 +526,48 @@ token=abc123
 O `<< 'EOF'` é um heredoc: tudo até a linha `EOF` vira a entrada do comando. É um jeito prático de colar um bloco recebido no chat direto no terminal.
 
 **Quando usar:** segredos em arquivos de configuração versionados, mensagens em chat, campos de texto em banco. **Quando não usar:** arquivos grandes, porque o binário é menor e mais rápido.
+
+### Segredos no git: sops
+
+Para arquivos de configuração num repositório, a ferramenta comum é o [sops](https://github.com/getsops/sops), que usa o age por baixo. Você declara quem pode ler num `.sops.yaml`:
+
+```yaml
+creation_rules:
+  - age: age1kayung4jcqqar5m50l82jyd87zmkdz24fh7mcgqnwl963vmx696q79xdjk
+```
+
+```bash
+sops encrypt --in-place secrets.yaml
+cat secrets.yaml
+```
+
+```
+database:
+    user: ENC[AES256_GCM,data:+Cbo,iv:jewOHvfShqtXjrFDgWXfo4Ox/wFlWjPjgzu9SJWe1tU=,tag:yc4HU9+iKEGCVGspYTf8HQ==,type:str]
+    password: ENC[AES256_GCM,data:BWALoqm5pg==,iv:UAyb4utFNLIdabUru/JQwzvs3lxm9J/NE5WVZbvIg9A=,tag:MWn1rA5pcd5Us0je9X1+9g==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBjVElXdWtLbzFrNEUxRlp2
+            ...
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1kayung4jcqqar5m50l82jyd87zmkdz24fh7mcgqnwl963vmx696q79xdjk
+```
+
+(Resumido.) É o envelope da seção 2 de novo: o sops criptografa os valores com uma chave própria e tranca essa chave com o age, em formato armor. Só os valores são criptografados: os nomes (`database`, `user`, `password`) continuam legíveis, então o diff no git ainda mostra o que mudou. Isso é prático, e também é metadado (seção 11).
+
+Para ler:
+
+```bash
+SOPS_AGE_KEY_FILE=~/.config/age/key.txt sops decrypt secrets.yaml
+```
+
+```
+database:
+    user: app
+    password: hunter2
+```
 
 ## 8. Protegendo a própria chave privada com senha
 
@@ -609,7 +722,164 @@ for f in backups/*.age; do
 done
 ```
 
-## 11. Atalhos para o dia a dia
+## 11. O que um arquivo criptografado ainda revela
+
+O age esconde o conteúdo, não tudo em volta dele:
+
+```bash
+ls -l resignation-letter.txt.age
+age-inspect resignation-letter.txt.age
+```
+
+```
+-rw-rw-r-- 1 david david 238 Oct  1 18:47 resignation-letter.txt.age
+
+Size breakdown (assuming it decrypts successfully):
+
+    Header                       168 bytes
+    Encryption overhead           32 bytes
+    Payload                       38 bytes
+                        -------------------
+    Total                        238 bytes
+```
+
+(Output do `age-inspect` resumido.)
+
+- **O nome:** o age não mexe nele. `resignation-letter.txt.age` (carta de demissão) diz muita coisa sem ser aberto.
+- **O tamanho exato:** o payload tem exatamente os 38 bytes do texto original, porque o age não adiciona preenchimento (`"max_padding": 0` no `--json`). Para conteúdo curto e previsível (um sim ou não, um PIN, um entre poucos documentos conhecidos), só o tamanho já pode entregar.
+- **Datas e dono:** os metadados normais do sistema de arquivos, como em qualquer arquivo.
+- **Para quem ele é, às vezes:** chaves age não deixam rastro no cabeçalho, mas chaves SSH deixam uma tag (seção 6), e chaves em hardware também (seção 13).
+
+Quando isso importa, criptografe um pacote em vez de arquivos soltos: `tar` mais age (seção 5) deixa um arquivo só, com nome neutro, e os nomes, tamanhos e a quantidade de arquivos lá dentro só aparecem depois de descriptografar.
+
+## 12. Quando uma chave vaza
+
+O age não tem revogação. Cada arquivo guarda no cabeçalho um envelope para cada chave para a qual foi criptografado, para sempre. Se uma chave privada vazar, todo arquivo já criptografado para ela pode ser aberto, inclusive backups antigos.
+
+Tirar a chave do `recipients.txt` não muda os arquivos que já existem. Aqui, um segredo criptografado para duas chaves (um notebook e um servidor antigo), depois que a chave do servidor vazou e foi removida da lista:
+
+```bash
+cat recipients.txt
+age -d -i old-server.txt secrets.age
+```
+
+```
+# laptop
+age14smdf4csaq89p6740gykhwsrn8gsl5zxprswsczsl8gj5zvsxckqensy50
+db password: hunter2
+```
+
+A correção é recriptografar para a lista atual. Faça isso por pipe, para o texto puro nunca tocar o disco:
+
+```bash
+age -d -i laptop.txt secrets.age | age -R recipients.txt -o secrets.age.new && mv secrets.age.new secrets.age
+age -d -i old-server.txt secrets.age
+```
+
+```
+age: error: no identity matched any of the recipients
+```
+
+O `&&` só substitui o arquivo se a recriptografia deu certo.
+
+Recriptografar só protege as cópias que você controla. Qualquer cópia feita antes (um backup em outro lugar, um arquivo já nas mãos de outra pessoa) continua abrindo com a chave vazada. Então, na prática:
+
+1. Gere uma chave nova e atualize o `recipients.txt`.
+2. Recriptografe os arquivos que você controla.
+3. **Troque os próprios segredos** (senhas, tokens) que estavam em arquivos que a chave antiga abria. Assuma que eles foram lidos.
+
+## 13. Chaves em hardware e plugins
+
+Até aqui a chave privada é uma linha de texto num arquivo: quem copia o arquivo tem a chave. A seção 8 coloca uma senha nela, mas numa máquina comprometida a senha pode ser capturada enquanto você digita. Chaves em hardware resolvem o problema na raiz: a chave privada é gerada dentro de um chip e não pode ser extraída. Para descriptografar, o dispositivo precisa estar conectado e, dependendo da configuração, pede um PIN ou um toque.
+
+O age não fala com hardware sozinho. Ele delega para **plugins**: programas separados chamados `age-plugin-<nome>`, que o age encontra no seu `PATH` e chama quando vê uma chave daquele tipo. Os principais:
+
+| Plugin | Hardware |
+| --- | --- |
+| [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey) | YubiKey e outros tokens PIV |
+| [age-plugin-se](https://github.com/remko/age-plugin-se) | Secure Enclave da Apple, nos Macs |
+| [age-plugin-tpm](https://github.com/Foxboron/age-plugin-tpm) | O chip TPM 2.0 da maioria dos PCs (experimental) |
+
+O fluxo com um YubiKey:
+
+1. O `age-plugin-yubikey` gera a chave dentro do YubiKey e escreve um **arquivo de identidade**. Diferente do `key.txt`, esse arquivo não guarda segredo nenhum: ele só diz ao age qual dispositivo e qual slot usar.
+2. A chave pública vai para o `recipients.txt` como qualquer outra. Criptografar para ela não precisa do YubiKey: qualquer pessoa continua podendo trancar arquivos para você.
+3. Para descriptografar, passe o arquivo de identidade no `-i`. O age chama o plugin, e o plugin pede ao YubiKey para abrir o envelope.
+
+Não tenho um YubiKey aqui, então esta seção não tem outputs capturados; o README do plugin traz os comandos exatos.
+
+Dois cuidados:
+
+- **Perder o dispositivo é perder a chave.** Não existe backup, e é justamente essa a ideia. Criptografe sempre para uma segunda chave também: uma chave de recuperação em papel (seção 14) ou um segundo YubiKey.
+- **Chaves em hardware deixam uma tag**, como as chaves SSH (seção 6). A especificação diz que esses tipos de destinatário permitem que quem tem a chave pública confira se um arquivo foi endereçado a ela.
+
+Plugins não servem só para hardware: o `age-plugin-pq`, que vem junto com os binários oficiais, leva as chaves pós-quânticas da seção 9 para versões antigas e outras implementações. E o [passage](https://github.com/FiloSottile/passage), um gerenciador de senhas construído sobre o age, costuma ser usado exatamente assim, com YubiKeys.
+
+## 14. Backup da chave, e o teste de restauração
+
+O checklist do final pede backup da chave e teste de restauração. Veja como fazer os dois.
+
+### Em papel
+
+A chave privada é uma linha só, e essa linha é o backup inteiro:
+
+```bash
+grep -v '^#' ~/.config/age/key.txt
+```
+
+```
+AGE-SECRET-KEY-1WQ3AZLFDJMCPFR6YKKRD9VSD638GWR5V0T9G6WN8Q5VNTD9GL5SQMVX4VR
+```
+
+Imprima ou escreva à mão, e guarde fora de casa. Copiar à mão é mais seguro do que parece, graças ao Bech32 (seção 1): depois do prefixo, o alfabeto deixa de fora caracteres fáceis de confundir (`1`, `b`, `i` e `o`), e o checksum pega erros de digitação. Com um caractere errado:
+
+```
+age: error: reading "typo-key.txt": failed to read "typo-key.txt": error at line 1: malformed secret key: invalid checksum
+```
+
+Uma armadilha: digite de volta em **maiúsculas**. Em minúsculas, o age não reconhece:
+
+```
+age: error: reading "lower-key.txt": failed to read "lower-key.txt": error at line 1: unknown identity type
+```
+
+Se você prefere escanear a digitar, o [PaperAge](https://github.com/matiaskorhonen/paper-age) é uma ferramenta feita para backups de segredos em papel.
+
+### O teste de restauração
+
+Um backup que nunca foi restaurado é uma esperança, não um backup. Teste usando só o que você teria depois de perder o notebook: a chave de recuperação do papel. Digite ela num arquivo novo e abra o backup:
+
+```bash
+mkdir restore-test && cd restore-test
+nano key-from-paper.txt   # a linha do papel
+age -d -i key-from-paper.txt ../documents.tar.gz.age | tar xzf -
+```
+
+Depois compare com os originais, byte a byte:
+
+```bash
+(cd .. && sha256sum Documents/*) > ../original.sha
+sha256sum -c ../original.sha
+```
+
+```
+Documents/contract.pdf: OK
+Documents/notes.txt: OK
+```
+
+No fim, apague o `restore-test`: o `key-from-paper.txt` é a sua chave privada em texto puro.
+
+### Apagando o original
+
+Depois de criptografar, o original continua lá em texto puro (seção 2), e o `rm` só remove o nome: os dados ficam no disco até algo sobrescrevê-los. A ferramenta clássica é o `shred`, mas a própria documentação dele avisa que ele depende de o sistema de arquivos sobrescrever os dados no mesmo lugar, o que sistemas com journaling, RAID, snapshots e compressão não garantem (nem os copy-on-write, como btrfs e ZFS). Num SSD, o próprio disco decide onde cada escrita cai, então sobrescrever um arquivo normalmente preenche células novas e deixa as antigas intactas. E um backup ou snapshot pode já ter uma cópia.
+
+O que funciona na prática:
+
+1. **Criptografia de disco inteiro** (LUKS, no Linux): o que sobrar no disco fica ilegível de qualquer jeito. Essa é a proteção de verdade.
+2. **Pipes** (seção 5): texto puro que nunca toca o disco nunca precisa ser apagado.
+3. **Depois** um `rm` normal no original.
+
+## 15. Atalhos para o dia a dia
 
 Digitar `-R`, `-i` e caminhos toda vez cansa. Coloque isto no final do `~/.bashrc` (ou `~/.zshrc`):
 
@@ -679,20 +949,29 @@ O `${f%.age}` é expansão do bash que remove o sufixo `.age` do nome. A checage
 | Chave com senha | `age-keygen \| age -p -o key.age` |
 | Pós-quântico | `age-keygen -pq -o key-pq.txt` |
 | Inspecionar | `age-inspect x.age` |
+| Assinar | `ssh-keygen -Y sign -f ~/.ssh/id_ed25519 -n file x.age` |
+| Conferir uma assinatura | `ssh-keygen -Y verify -f allowed_signers -I email -n file -s x.age.sig < x.age` |
+| Recriptografar depois de trocar chaves | `age -d -i key.txt x.age \| age -R recipients.txt -o x.age.new` |
 
 Antes de confiar seus dados ao age, confira:
 
 - [ ] Chave em `~/.config/age/` com permissão `600`, em disco criptografado
 - [ ] `recipients.txt` com a chave do dia a dia **e** uma chave de recuperação guardada offline
-- [ ] Backup da chave em papel ou pendrive, fora de casa
-- [ ] Teste de restauração feito usando só o backup
+- [ ] Backup da chave em papel ou pendrive, fora de casa (seção 14)
+- [ ] Teste de restauração feito usando só o backup (seção 14)
 - [ ] Pipes no lugar de arquivos intermediários em texto puro
-- [ ] Originais apagados depois de criptografar, quando for o caso
+- [ ] Originais apagados depois de criptografar, em disco criptografado (seção 14)
+- [ ] Assinaturas nos arquivos cuja autoria importa
+- [ ] Um plano para chave vazada: recriptografar e trocar os segredos (seção 12)
 
 ## Fontes
 
 - [Repositório do age no GitHub](https://github.com/FiloSottile/age)
 - [Especificação do formato age v1](https://age-encryption.org/v1)
+- [rage, a implementação em Rust](https://github.com/str4d/rage)
+- [awesome-age: plugins, ferramentas e integrações](https://github.com/FiloSottile/awesome-age)
+- [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey)
+- [sops](https://github.com/getsops/sops)
 - [Manual do age (man page)](https://filippo.io/age/age.1)
 
 import { ArticleWrapper } from '../ArticleWrapper';
