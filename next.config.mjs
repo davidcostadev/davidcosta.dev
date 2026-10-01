@@ -55,9 +55,6 @@ const withMDX = mdxfrom({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
-  images: {
-    domains: ['source.unsplash.com'],
-  },
   async redirects() {
     return [
       {

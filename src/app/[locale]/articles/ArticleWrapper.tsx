@@ -42,7 +42,8 @@ export function ArticleWrapper({
       {children}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        // Escape < so a </script> in the frontmatter can't close the tag early
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
     </>
   );
