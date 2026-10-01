@@ -53,6 +53,11 @@ module.exports = {
           dark: gray[100],
           light: '#2e3440',
         },
+        // body text sits one step below headings so bold text stands out
+        body: {
+          dark: gray[300],
+          light: '#3b4252',
+        },
         secondary: {
           dark: gray[400],
           light: gray[600],

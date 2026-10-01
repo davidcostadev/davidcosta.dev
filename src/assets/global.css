@@ -21,3 +21,8 @@
 /* a:not(:where([class~='text-primary'], [class~='text-secondary'])) {
   @apply text-purple-600 underline hover:bg-white hover:text-purple-800 hover:opacity-90 hover:no-underline;
 } */
+
+/* The first heading right after the article header doesn't need a full section gap */
+article header + h2[class] {
+  margin-top: 0.8rem;
+}

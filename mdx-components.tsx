@@ -1,5 +1,7 @@
 import type { MDXComponents } from 'mdx/types';
 
+const listClassName = 'font-body text-xl mb-[1.6rem] text-body-light dark:text-body-dark';
+
 // This file is required to use MDX in `app` directory.
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
@@ -7,56 +9,71 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     ...components,
     p: (props) => (
       <p
-        className="font-body text-xl mb-4 lg:mb-8 font-normal leading-relaxed whitespace-pre-wrap text-primary-light dark:text-primary-dark"
+        className="font-body text-xl mb-[0.8rem] lg:mb-[1.6rem] font-normal leading-relaxed whitespace-pre-wrap text-body-light dark:text-body-dark"
         {...props}
       />
     ),
     h1: (props) => (
       <h1
-        className="font-title text-5xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-8 mt-14"
+        className="font-title text-5xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
       />
     ),
     h2: (props) => (
       <h2
-        className="font-title text-4xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-8 mt-14"
+        className="font-title text-4xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
       />
     ),
     h3: (props) => (
       <h3
-        className="font-title text-3xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-8 mt-14"
+        className="font-title text-3xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
       />
     ),
     h4: (props) => (
       <h4
-        className="font-title text-2xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-8 mt-14"
+        className="font-title text-2xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
       />
     ),
     h5: (props) => (
       <h5
-        className="font-title text-xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-8 mt-14"
+        className="font-title text-xl text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
       />
     ),
     h6: (props) => (
       <h6
-        className="font-title text-base text-primary-light dark:text-primary-dark font-bold leading-tight mb-8 mt-14"
+        className="font-title text-base text-primary-light dark:text-primary-dark font-bold leading-tight mb-[1.6rem] mt-[2.8rem]"
         {...props}
       />
     ),
-    ul: (props) => <ul className="list-disc mb-8 ml-6 list-outside" {...props} />,
-    ol: (props) => <ol className="list-decimal list-outside ml-6 mb-8" {...props} />,
-    li: (props) => (
-      <li
-        className="mb-3 leading-relaxed marker:text-theme-light dark:marker:text-theme-dark marker:mr-0"
-        {...props}
-      />
+    // GFM task lists (`- [ ]`) come with their own classes, so they get their own styles
+    ul: ({ className, ...props }) =>
+      className?.includes('contains-task-list') ? (
+        <ul className={`${listClassName} list-none`} {...props} />
+      ) : (
+        <ul className={`${listClassName} list-disc ml-6 list-outside`} {...props} />
+      ),
+    ol: (props) => <ol className={`${listClassName} list-decimal list-outside ml-6`} {...props} />,
+    li: ({ className, ...props }) =>
+      className?.includes('task-list-item') ? (
+        <li className="leading-normal [&>input]:mr-3" {...props} />
+      ) : (
+        <li
+          className="leading-normal marker:text-theme-light dark:marker:text-theme-dark marker:mr-0"
+          {...props}
+        />
+      ),
+    strong: (props) => <strong className="font-bold text-gray-950 dark:text-white" {...props} />,
+    table: (props) => (
+      <div className="overflow-x-auto mb-[1.6rem]">
+        <table {...props} />
+      </div>
     ),
     code: (props) => <code className="font-code px-1 py-px rounded-md " {...props} />,
-    hr: (props) => <hr className="border-border-200 dark:border-white/10 mb-8" {...props} />,
+    hr: (props) => <hr className="border-border-200 dark:border-white/10 mb-[1.6rem]" {...props} />,
     a: (props) => (
       <a
         className="text-link-light-normal dark:text-link-dark-normal hover:text-link-light--hover dark:hover:text-link-dark--hover active:text-link-light -active dark:active:text-link-dark-active underline hover:no-underline"

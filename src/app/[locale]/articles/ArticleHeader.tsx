@@ -17,11 +17,11 @@ export const ArticleHeader = ({ title, date, tags }: FrontMatter) => {
   });
 
   return (
-    <header className="py-6">
-      <h1 className="font-title text-5xl text-primary-light dark:text-primary-dark font-bold leading-tight my-4">
+    <header className="py-[1.2rem]">
+      <h1 className="font-title text-5xl text-primary-light dark:text-primary-dark font-bold leading-tight my-[0.8rem]">
         {title}
       </h1>
-      <p className="text-lg font-body text-secondary-light dark:text-secondary-dark font-bold my-4">
+      <p className="text-lg font-body text-secondary-light dark:text-secondary-dark font-bold my-[0.8rem]">
         {locatedDate}
       </p>
       {tags && tags?.length > 0 && (

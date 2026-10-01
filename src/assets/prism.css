@@ -50,7 +50,7 @@ code:not([class*='language-']) {
   color: var(--code-text);
   padding: 0.1em 0.3em;
   border-radius: 0.3em;
-  white-space: normal;
+  white-space: nowrap;
   font-size: 0.85em;
 }
 a code:not([class*='language-']) {
@@ -59,7 +59,7 @@ a code:not([class*='language-']) {
 
 /* Code blocks */
 .remark-highlight {
-  @apply my-8;
+  @apply my-[1.6rem];
 }
 
 code[class*='language-'],
@@ -89,8 +89,8 @@ code {
 pre[class*='language-'] {
   background: var(--code-bg);
   border: 1px solid var(--code-border);
-  padding: 1.25rem;
-  margin: 0.5em 0;
+  padding: 1rem 1.25rem;
+  margin: 0.4em 0;
   overflow: auto;
   @apply rounded-xl;
 }
