@@ -11,6 +11,7 @@ interface Post {
   lang: string;
   tags: string[];
   description: string;
+  draft?: boolean;
 }
 
 type GetPostsProps = {
@@ -21,8 +22,6 @@ type GetPostsProps = {
 export async function getPosts({ limit = 10, lang }: GetPostsProps): Promise<Post[]> {
   const posts: Post[] = [];
 
-  let count = 0;
-
   try {
     const dirPath = path.join(__dirname);
     const slugs = (await readdir(dirPath, { withFileTypes: true })).filter((dirent) =>
@@ -30,16 +29,14 @@ export async function getPosts({ limit = 10, lang }: GetPostsProps): Promise<Pos
     );
 
     for (const { name } of slugs) {
-      if (count >= limit) {
-        break;
-      }
       const mdxFilePath = path.join(dirPath, name, `${lang}.mdx`);
       try {
         const { metadata } = await import(`.${mdxFilePath.replace(__dirname, '')}`);
         const postMetadata: Omit<Post, 'slug' | 'lang'> = metadata;
 
-        posts.push({ slug: name, lang, ...postMetadata });
-        count++;
+        if (!postMetadata.draft) {
+          posts.push({ slug: name, lang, ...postMetadata });
+        }
       } catch (error) {
         console.error(`Error on load ${mdxFilePath}:`, error);
         continue;
@@ -49,7 +46,8 @@ export async function getPosts({ limit = 10, lang }: GetPostsProps): Promise<Pos
     console.error(`Error on read directory ${lang}:`, error);
   }
 
+  // Sort before limiting, otherwise the limit keeps the first folders alphabetically
   posts.sort((a, b) => +new Date(b.date) - +new Date(a.date));
 
-  return posts;
+  return posts.slice(0, limit);
 }

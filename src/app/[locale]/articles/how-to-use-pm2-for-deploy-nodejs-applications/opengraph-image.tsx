@@ -1,64 +1,28 @@
-import { ImageResponse } from 'next/og';
-
-export async function generateImageMetadata() {
-  const images = [1];
-  return images.map((image, idx) => ({
-    id: idx,
-    size: { width: 1200, height: 600 },
-    alt: 'asdasdasd',
-    contentType: 'image/png',
-  }));
-}
+import { OG_IMAGE_SIZE, renderArticleOgImage, type ArticleOgContent } from '../article-og-image';
 
 export const runtime = 'edge';
 
-// Image metadata
-export const alt = 'About Acme';
-export const size = {
-  width: 1200,
-  height: 630,
+const CONTENT: Record<string, ArticleOgContent> = {
+  en: {
+    title: 'How to Use PM2 for Deploying Node.js Applications',
+    description: 'A tutorial on how to easily use PM2 to deploy your Node.js applications.',
+    alt: 'How to Use PM2 for Deploying Node.js Applications, by David Costa',
+  },
+  'pt-br': {
+    title: 'Como Usar PM2 para Desdobrar Aplicações Node.js',
+    description:
+      'Um tutorial sobre como usar facilmente o PM2 para implantar seus aplicativos Node.js.',
+    alt: 'Como Usar PM2 para Desdobrar Aplicações Node.js, por David Costa',
+  },
 };
 
-export const contentType = 'image/png';
+// Per-locale metadata so the alt text matches the page language
+export function generateImageMetadata({ params: { locale } }: { params: { locale: string } }) {
+  const { alt } = CONTENT[locale] ?? CONTENT.en;
+  return [{ id: 'cover', alt, size: OG_IMAGE_SIZE, contentType: 'image/png' }];
+}
 
-export default async function Image() {
-  return new ImageResponse(
-    (
-      // ImageResponse JSX element
-      <div
-        style={{
-          background: 'white',
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          padding: 20,
-          gap: 20,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 40,
-          }}
-        >
-          Using Popper for Tooltips with TypeScript and Styled-components
-        </div>
-        <div
-          style={{
-            fontSize: 18,
-          }}
-        >
-          In this article I talk about my journey of creating a tooltip with Popper.js.
-        </div>
-      </div>
-    ),
-    // ImageResponse options
-    {
-      // For convenience, we can re-use the exported opengraph-image
-      // size config to also set the ImageResponse's width and height.
-      ...size,
-    },
-  );
+export default function Image({ params: { locale } }: { params: { locale: string } }) {
+  const { title, description } = CONTENT[locale] ?? CONTENT.en;
+  return renderArticleOgImage({ title, description, tags: ['pm2', 'node', 'javascript'] });
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
 import { locales } from 'config';
 
@@ -15,6 +16,7 @@ interface ArticleFrontMatter {
   date: string;
   tags?: string[];
   keywords?: string[];
+  draft?: boolean;
 }
 
 const articlePath = (slug: string, locale: string) => `/${locale}/articles/${slug}`;
@@ -28,7 +30,11 @@ export async function getArticleMetadata(slug: string, locale: string): Promise<
   const { metadata } = (await import(`./${slug}/${lang}.mdx`)) as { metadata: ArticleFrontMatter };
   const url = articlePath(slug, lang);
 
+  // Drafts stay previewable in dev but don't exist in production
+  if (metadata.draft && process.env.NODE_ENV === 'production') notFound();
+
   return {
+    ...(metadata.draft && { robots: { index: false, follow: false } }),
     title: metadata.title,
     description: metadata.description,
     keywords: metadata.keywords,
