@@ -2,15 +2,16 @@ import { OG_IMAGE_SIZE, renderArticleOgImage, type ArticleOgContent } from '../a
 
 const CONTENT: Record<string, ArticleOgContent> = {
   en: {
-    title: 'How to Use PM2 for Deploying Node.js Applications',
-    description: 'A tutorial on how to easily use PM2 to deploy your Node.js applications.',
-    alt: 'How to Use PM2 for Deploying Node.js Applications, by David Costa',
+    title: 'Deploying Node.js apps with PM2 and pnpm',
+    description:
+      'One command from your machine: PM2 deploy, pnpm and the .env support built into Node.',
+    alt: 'Deploying Node.js apps with PM2 and pnpm, by David Costa',
   },
   'pt-br': {
-    title: 'Como Usar PM2 para Desdobrar Aplicações Node.js',
+    title: 'Deploy de aplicações Node.js com PM2 e pnpm',
     description:
-      'Um tutorial sobre como usar facilmente o PM2 para implantar seus aplicativos Node.js.',
-    alt: 'Como Usar PM2 para Desdobrar Aplicações Node.js, por David Costa',
+      'Um comando da sua máquina: PM2 deploy, pnpm e o suporte a .env que já vem no Node.',
+    alt: 'Deploy de aplicações Node.js com PM2 e pnpm, por David Costa',
   },
 };
 
@@ -24,5 +25,5 @@ export async function generateImageMetadata({ params }: { params: Promise<{ loca
 export default async function Image({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const { title, description } = CONTENT[locale] ?? CONTENT.en;
-  return renderArticleOgImage({ title, description, tags: ['pm2', 'node', 'javascript'] });
+  return renderArticleOgImage({ title, description, tags: ['node', 'pm2', 'pnpm', 'deploy'] });
 }

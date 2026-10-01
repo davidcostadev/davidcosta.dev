@@ -1,93 +1,46 @@
-Deploying Node.js applications can be streamlined and made more efficient with PM2, a popular process manager. This guide will walk you through the steps of setting up and deploying a Node.js application using PM2, ensuring that you understand the context and rationale behind each action.
+PM2 is best known for keeping Node.js processes alive, but it also ships a small deploy tool: from your machine, one command connects to the server over SSH, pulls the latest commit, installs dependencies and reloads the app. No CI pipeline, no containers, just git and SSH.
 
-### Step 1: Install PM2 and dotenv
+This article was first published in 2020 and rewritten in October 2026 for PM2 7, pnpm and Node.js 22. The biggest change: Node now reads `.env` files on its own, so `dotenv` is gone. The setup, deploy, reload, rollback and startup steps were run for real against a test app; the outputs come from that run, with the host and paths swapped for the example ones.
 
-First, install PM2 and dotenv as development dependencies to manage your application processes and environment variables.
+## What you need
 
-```bash
-npm install --save-dev pm2 dotenv
-```
+- A Linux server you can reach over SSH with a key, as a regular user (here `deploy`).
+- Node.js 22 or newer on the server, plus git.
+- Read access from the server to your repository, usually through a [deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys).
 
-Next, install PM2 globally to make it accessible from anywhere on your system.
-
-```bash
-npm install —global pm2
-```
-
----
-
-### Step 2: Setup PM2 Deployment Configuration
-
-PM2 offers a deployment system that allows you to deploy your application to remote servers. To set up the deployment configuration for your production environment, run:
+On the server, install pnpm and PM2 globally:
 
 ```bash
-pm2 deploy production setup
+npm install --global pnpm pm2
 ```
 
-This command creates a default configuration that you can customize for your specific needs.
+PM2 runs a daemon that owns your app's process, so on the server it should be a global install. That matters later, when it's set to start on boot.
 
----
+## 1. Add PM2 to the project
 
-### Step 3: Configure Environment Variables
-
-Environment variables are crucial for managing configuration settings across different environments (development, production, etc.). Create and configure a `.env` file for your server:
-
-Navigate to your project directory and copy the example environment file to create your own:
+On your machine, PM2 only triggers the deploy, so a dev dependency is enough:
 
 ```bash
-cd /home/username/www/example.com/source
-cp .env.example .env
+pnpm add --save-dev pm2
 ```
 
-Edit the `.env` file to set your specific environment variables. You can use `vi`, `nano`, or any other text editor:
+You'll run it through `pnpm exec`, without installing anything globally.
 
-```bash
-vi .env
-```
+## 2. The ecosystem file
 
-Ensure that your `.env` file is added to `.gitignore` to avoid committing sensitive information to version control:
-
-```plaintext
-.env
-```
-
----
-
-### Step 4: Create .env.example
-
-An `.env.example` file provides a template of the necessary environment variables for other developers or for setting up new environments. Here’s an example:
-
-```markdown
-# envs for your local
-
-DEPLOY_NAME=application.backend
-DEPLOY_USER=username
-DEPLOY_HOST=localhost
-DEPLOY_PATH=/home/username/www/example.com
-
-# envs for your server
-
-DATABASE_URL=mysql://user:password@127.0.0.1:3306/database
-```
-
----
-
-### Step 5: Configure PM2 Ecosystem File
-
-The `ecosystem.config.js` file is where you define your application and deployment settings for PM2. This file can be customized to fit your deployment workflow:
+PM2 reads its settings from an ecosystem file. Name it `ecosystem.config.cjs`: `pnpm init` creates projects with `"type": "module"`, and in those a `.js` file using `module.exports` fails to load. PM2 finds the `.cjs` name on its own.
 
 ```javascript
-const dotenv = require('dotenv');
-dotenv.config();
+// The deploy target lives in your local .env, so it never lands in git
+const { existsSync } = require('node:fs');
+if (existsSync('.env')) process.loadEnvFile();
 
 module.exports = {
   apps: [
     {
-      name: process.env.DEPLOY_NAME,
+      name: 'api',
       script: './src/server.js',
-      env: {
-        COMMON_VARIABLE: 'true',
-      },
+      node_args: '--env-file=.env',
       env_production: {
         NODE_ENV: 'production',
       },
@@ -98,41 +51,177 @@ module.exports = {
     production: {
       user: process.env.DEPLOY_USER,
       host: process.env.DEPLOY_HOST,
-      ref: 'origin/master',
+      ref: 'origin/main',
       repo: 'git@github.com:username/repo.git',
       path: process.env.DEPLOY_PATH,
+      'post-setup': 'cp .env.example ../shared/.env',
       'post-deploy': [
-        'npm install',
-        `pm2 reload ecosystem.config.js --env production --name ${process.env.DEPLOY_NAME}`,
+        'ln -sfn ../shared/.env .env',
+        'pnpm install --frozen-lockfile',
+        'pm2 startOrReload ecosystem.config.cjs --env production',
       ].join(' && '),
     },
   },
 };
 ```
 
-This configuration file defines the application settings under `apps` and the deployment settings under `deploy`. The `post-deploy` section specifies commands to run after deploying, such as installing dependencies and reloading the application.
+What each part does:
 
----
+- **`process.loadEnvFile()`** is built into Node and replaces `dotenv`. It reads the server address from your local `.env`.
+- **`node_args: '--env-file=.env'`** makes Node load the server's `.env` when the app starts, so the app needs no env library either.
+- **`post-setup`** runs once, after the first clone, and copies the example env file into `shared/`, the folder that survives every deploy.
+- **`post-deploy`** runs after each deploy: it links the shared `.env` into the code, installs exactly what the lockfile says, and starts the app the first time or reloads it after that.
 
-### Step 6: Deploy Your Application
+## 3. Environment files
 
-Once everything is set up, you can deploy your application with the following command:
+Two `.env` files with the same name, on different machines. Keep both out of git:
 
-```bash
-pm2 deploy production
+```text
+node_modules
+.env
 ```
 
-This command uses the deployment configuration defined in your `ecosystem.config.js` to deploy your application to the production environment.
+Your local `.env` says where to deploy:
+
+```text
+DEPLOY_USER=deploy
+DEPLOY_HOST=203.0.113.10
+DEPLOY_PATH=/home/deploy/www/example.com
+```
+
+The server's `.env` holds the app's settings. Commit an `.env.example` as its template:
+
+```text
+PORT=3000
+APP_ENV=production
+```
+
+## 4. Prepare the server
+
+`setup` creates the folder structure on the server and clones the repository. Run it once:
+
+```bash
+pnpm exec pm2 deploy production setup
+```
+
+```
+--> Deploying to production environment
+--> on host 203.0.113.10
+  ○ hook pre-setup
+  ○ running setup
+  ○ cloning git@github.com:username/repo.git
+  ○ full fetch
+Cloning into '/home/deploy/www/example.com/source'...
+done.
+  ○ executing post-setup `cp .env.example ../shared/.env`
+  ○ setup complete
+--> Success
+```
+
+The server now has:
+
+```text
+/home/deploy/www/example.com
+├── current -> source
+├── shared
+│   ├── .env
+│   ├── logs
+│   └── pids
+└── source
+```
+
+`source` holds the code, `current` points at it, and `shared` keeps whatever must outlive a deploy. Fill in the real values in `shared/.env`:
+
+```bash
+ssh deploy@203.0.113.10
+nano ~/www/example.com/shared/.env
+```
+
+## 5. Deploy
+
+```bash
+pnpm exec pm2 deploy production
+```
+
+```
+--> Deploying to production environment
+--> on host 203.0.113.10
+
+  ○ deploying origin/main
+  ○ executing pre-deploy-local
+  ○ hook pre-deploy
+  ○ fetching updates
+  ○ full fetch
+  ○ resetting HEAD to origin/main
+HEAD is now at aef89b2 first version
+  ○ executing post-deploy `ln -sfn ../shared/.env .env && pnpm install --frozen-lockfile && pm2 startOrReload ecosystem.config.cjs --env production`
+Lockfile is up to date, resolution step is skipped
+Packages: +77
+Done in 451ms using pnpm v11.24.0
+[PM2][WARN] Applications api not running, starting...
+[PM2] App [api] launched (1 instances)
+  ○ successfully deployed origin/main
+--> Success
+```
+
+On the first deploy the app wasn't running yet, so PM2 started it. From the next deploy on, the same command reloads it:
+
+```
+[PM2] Applying action reloadProcessId on app [api](ids: [ 0 ])
+[PM2] [api](0) ✓
+```
+
+## 6. Survive a reboot
+
+So far the app lives only as long as the PM2 daemon. On the server, save the process list and register PM2 with the init system:
+
+```bash
+pm2 save
+pm2 startup
+```
+
+```
+[PM2] Saving current process list...
+[PM2] Successfully saved in /home/deploy/.pm2/dump.pm2
+[PM2] Init System found: systemd
+[PM2] To setup the Startup Script, copy/paste the following command:
+sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u deploy --hp /home/deploy
+```
+
+`pm2 startup` doesn't install anything: it prints the command to run with `sudo`. Notice it points at the PM2 binary's path. That's why PM2 is global on the server: a copy from the project's `node_modules` would point inside a folder that changes with every upgrade.
+
+## Day to day
+
+| Task | Command |
+| --- | --- |
+| Deploy the latest commit | `pnpm exec pm2 deploy production` |
+| Roll back one deploy | `pnpm exec pm2 deploy production revert 1` |
+| List past deploys | `pnpm exec pm2 deploy production list` |
+| Run a command on the server | `pnpm exec pm2 deploy production exec "pm2 logs api --lines 20 --nostream"` |
+
+Deploy always ships what's on `origin/main`, so push before you deploy. A rollback checks out the previous commit and runs `post-deploy` again, reinstalling dependencies and reloading the app.
+
+## When the deploy can't find node or pnpm
+
+PM2 runs the hooks through a non-interactive SSH session. If Node on the server came from nvm, that session usually doesn't load it: Ubuntu's default `~/.bashrc` stops early for non-interactive shells, before the lines nvm adds at the end. The deploy then fails with `pnpm: command not found`. Move the nvm lines above that early `return`, or install Node from your distribution's packages.
+
+## Sources
+
+- [PM2 deployment docs](https://pm2.keymetrics.io/docs/usage/deployment/)
+- [PM2 ecosystem file](https://pm2.keymetrics.io/docs/usage/application-declaration/)
+- [Node.js `--env-file`](https://nodejs.org/api/cli.html#--env-filefile)
+- [`process.loadEnvFile()`](https://nodejs.org/api/process.html#processloadenvfilepath)
 
 import { ArticleWrapper } from '../ArticleWrapper';
 
 export const metadata = {
-  title: 'How to Use PM2 for Deploying Node.js Applications',
+  title: 'Deploying Node.js apps with PM2 and pnpm',
   date: '2020-08-14T13:45:10.015Z',
   lang: 'en',
-  tags: ['Seedling', 'javascript', 'node'],
-  description: 'A tutorial on how to easily use PM2 to deploy your Node.js applications',
-  keywords: ['pm2', 'node.js', 'deployment', 'process manager'],
+  tags: ['node', 'pm2', 'pnpm', 'deploy'],
+  description:
+    'Deploy a Node.js app to your own server with one command: PM2 deploy, pnpm and the .env support built into Node.',
+  keywords: ['pm2', 'pnpm', 'node.js', 'deployment', 'process manager', 'env-file'],
   authors: {
     name: 'David Costa',
   },

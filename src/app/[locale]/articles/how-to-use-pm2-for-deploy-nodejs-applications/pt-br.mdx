@@ -1,93 +1,46 @@
-Desdobrar aplicações Node.js pode ser simplificado e tornado mais eficiente com o PM2, um gerenciador de processos popular. Este guia o conduzirá pelos passos de configuração e desdobramento de uma aplicação Node.js usando PM2, garantindo que você compreenda o contexto e a razão por trás de cada ação.
+O PM2 é conhecido por manter processos Node.js de pé, mas ele também traz uma pequena ferramenta de deploy: da sua máquina, um comando conecta no servidor por SSH, puxa o último commit, instala as dependências e recarrega a aplicação. Sem pipeline de CI, sem containers, só git e SSH.
 
-### Passo 1: Instalar PM2 e dotenv
+Este artigo foi publicado em 2020 e reescrito em outubro de 2026 para o PM2 7, o pnpm e o Node.js 22. A maior mudança: o Node agora lê arquivos `.env` sozinho, então o `dotenv` saiu. Os passos de setup, deploy, reload, rollback e startup foram executados de verdade com uma aplicação de teste; os outputs vêm dessa execução, com o host e os caminhos trocados pelos do exemplo.
 
-Primeiro, instale o PM2 e o dotenv como dependências de desenvolvimento para gerenciar seus processos de aplicação e variáveis de ambiente.
+## O que você precisa
 
-```bash
-npm install --save-dev pm2 dotenv
-```
+- Um servidor Linux acessível por SSH com chave, com um usuário comum (aqui, `deploy`).
+- Node.js 22 ou mais novo no servidor, e git.
+- Acesso de leitura do servidor ao seu repositório, normalmente por uma [deploy key](https://docs.github.com/pt/authentication/connecting-to-github-with-ssh/managing-deploy-keys).
 
-Em seguida, instale o PM2 globalmente para torná-lo acessível de qualquer lugar no seu sistema.
-
-```bash
-npm install —global pm2
-```
-
----
-
-### Passo 2: Configurar o Desdobramento com PM2
-
-O PM2 oferece um sistema de desdobramento que permite desdobrar sua aplicação em servidores remotos. Para configurar a configuração de desdobramento para o ambiente de produção, execute:
+No servidor, instale o pnpm e o PM2 globalmente:
 
 ```bash
-pm2 deploy production setup
+npm install --global pnpm pm2
 ```
 
-Este comando cria uma configuração padrão que você pode personalizar para suas necessidades específicas.
+O PM2 roda um daemon que é dono do processo da sua aplicação, então no servidor ele deve ser global. Isso vai importar mais à frente, quando ele for configurado para subir junto com o sistema.
 
----
+## 1. Adicione o PM2 ao projeto
 
-### Passo 3: Configurar Variáveis de Ambiente
-
-As variáveis de ambiente são cruciais para gerenciar configurações em diferentes ambientes (desenvolvimento, produção, etc.). Crie e configure um arquivo `.env` para o seu servidor:
-
-Navegue até o diretório do seu projeto e copie o arquivo de exemplo de ambiente para criar o seu próprio:
+Na sua máquina, o PM2 só dispara o deploy, então basta uma dependência de desenvolvimento:
 
 ```bash
-cd /home/username/www/example.com/source
-cp .env.example .env
+pnpm add --save-dev pm2
 ```
 
-Edite o arquivo `.env` para definir suas variáveis de ambiente específicas. Você pode usar `vi`, `nano` ou qualquer outro editor de texto:
+Você vai rodá-lo pelo `pnpm exec`, sem instalar nada globalmente.
 
-```bash
-vi .env
-```
+## 2. O arquivo ecosystem
 
-Certifique-se de que seu arquivo `.env` seja adicionado ao `.gitignore` para evitar o compromisso de informações sensíveis no controle de versão:
-
-```plaintext
-.env
-```
-
----
-
-### Passo 4: Criar .env.example
-
-Um arquivo `.env.example` fornece um modelo das variáveis de ambiente necessárias para outros desenvolvedores ou para configurar novos ambientes. Aqui está um exemplo:
-
-```markdown
-# envs for your local
-
-DEPLOY_NAME=application.backend
-DEPLOY_USER=username
-DEPLOY_HOST=localhost
-DEPLOY_PATH=/home/username/www/example.com
-
-# envs for your server
-
-DATABASE_URL=mysql://user:password@127.0.0.1:3306/database
-```
-
----
-
-### Passo 5: Configurar Arquivo de Ecossistema do PM2
-
-O arquivo `ecosystem.config.js` é onde você define suas configurações de aplicação e desdobramento para o PM2. Este arquivo pode ser personalizado para se ajustar ao seu fluxo de trabalho de desdobramento:
+O PM2 lê as configurações de um arquivo ecosystem. Chame ele de `ecosystem.config.cjs`: o `pnpm init` cria projetos com `"type": "module"`, e neles um arquivo `.js` usando `module.exports` falha ao carregar. O PM2 encontra o nome `.cjs` sozinho.
 
 ```javascript
-const dotenv = require('dotenv');
-dotenv.config();
+// O destino do deploy fica no seu .env local, então nunca vai para o git
+const { existsSync } = require('node:fs');
+if (existsSync('.env')) process.loadEnvFile();
 
 module.exports = {
   apps: [
     {
-      name: process.env.DEPLOY_NAME,
+      name: 'api',
       script: './src/server.js',
-      env: {
-        COMMON_VARIABLE: 'true',
-      },
+      node_args: '--env-file=.env',
       env_production: {
         NODE_ENV: 'production',
       },
@@ -98,42 +51,177 @@ module.exports = {
     production: {
       user: process.env.DEPLOY_USER,
       host: process.env.DEPLOY_HOST,
-      ref: 'origin/master',
+      ref: 'origin/main',
       repo: 'git@github.com:username/repo.git',
       path: process.env.DEPLOY_PATH,
+      'post-setup': 'cp .env.example ../shared/.env',
       'post-deploy': [
-        'npm install',
-        `pm2 reload ecosystem.config.js --env production --name ${process.env.DEPLOY_NAME}`,
+        'ln -sfn ../shared/.env .env',
+        'pnpm install --frozen-lockfile',
+        'pm2 startOrReload ecosystem.config.cjs --env production',
       ].join(' && '),
     },
   },
 };
 ```
 
-Este arquivo de configuração define as configurações da aplicação em `apps` e as configurações de desdobramento em `deploy`. A seção `post-deploy` especifica os comandos a serem executados após o desdobramento, como instalar dependências e recarregar a aplicação.
+O que cada parte faz:
 
----
+- **`process.loadEnvFile()`** vem no próprio Node e substitui o `dotenv`. Ele lê o endereço do servidor do seu `.env` local.
+- **`node_args: '--env-file=.env'`** faz o Node carregar o `.env` do servidor quando a aplicação sobe, então a aplicação também não precisa de biblioteca de env.
+- **`post-setup`** roda uma vez, depois do primeiro clone, e copia o arquivo de exemplo para `shared/`, a pasta que sobrevive a todo deploy.
+- **`post-deploy`** roda depois de cada deploy: liga o `.env` compartilhado ao código, instala exatamente o que está no lockfile e sobe a aplicação na primeira vez, ou recarrega nas seguintes.
 
-### Passo 6: Desdobrar Sua Aplicação
+## 3. Arquivos de ambiente
 
-Uma vez que tudo esteja configurado, você pode desdobrar sua aplicação com o seguinte comando:
+São dois `.env` com o mesmo nome, em máquinas diferentes. Deixe os dois fora do git:
 
-```bash
-pm2 deploy production
+```text
+node_modules
+.env
 ```
 
-Este comando usa a configuração de desdobramento definida em seu `ecosystem.config.js` para desdobrar sua aplicação no ambiente de produção.
+O seu `.env` local diz para onde fazer o deploy:
+
+```text
+DEPLOY_USER=deploy
+DEPLOY_HOST=203.0.113.10
+DEPLOY_PATH=/home/deploy/www/example.com
+```
+
+O `.env` do servidor guarda as configurações da aplicação. Commite um `.env.example` como modelo:
+
+```text
+PORT=3000
+APP_ENV=production
+```
+
+## 4. Prepare o servidor
+
+O `setup` cria a estrutura de pastas no servidor e clona o repositório. Rode uma vez:
+
+```bash
+pnpm exec pm2 deploy production setup
+```
+
+```
+--> Deploying to production environment
+--> on host 203.0.113.10
+  ○ hook pre-setup
+  ○ running setup
+  ○ cloning git@github.com:username/repo.git
+  ○ full fetch
+Cloning into '/home/deploy/www/example.com/source'...
+done.
+  ○ executing post-setup `cp .env.example ../shared/.env`
+  ○ setup complete
+--> Success
+```
+
+Agora o servidor tem:
+
+```text
+/home/deploy/www/example.com
+├── current -> source
+├── shared
+│   ├── .env
+│   ├── logs
+│   └── pids
+└── source
+```
+
+`source` guarda o código, `current` aponta para ele, e `shared` guarda o que precisa sobreviver a um deploy. Preencha os valores reais no `shared/.env`:
+
+```bash
+ssh deploy@203.0.113.10
+nano ~/www/example.com/shared/.env
+```
+
+## 5. Faça o deploy
+
+```bash
+pnpm exec pm2 deploy production
+```
+
+```
+--> Deploying to production environment
+--> on host 203.0.113.10
+
+  ○ deploying origin/main
+  ○ executing pre-deploy-local
+  ○ hook pre-deploy
+  ○ fetching updates
+  ○ full fetch
+  ○ resetting HEAD to origin/main
+HEAD is now at aef89b2 first version
+  ○ executing post-deploy `ln -sfn ../shared/.env .env && pnpm install --frozen-lockfile && pm2 startOrReload ecosystem.config.cjs --env production`
+Lockfile is up to date, resolution step is skipped
+Packages: +77
+Done in 451ms using pnpm v11.24.0
+[PM2][WARN] Applications api not running, starting...
+[PM2] App [api] launched (1 instances)
+  ○ successfully deployed origin/main
+--> Success
+```
+
+No primeiro deploy a aplicação ainda não estava rodando, então o PM2 subiu ela. Do próximo deploy em diante, o mesmo comando recarrega:
+
+```
+[PM2] Applying action reloadProcessId on app [api](ids: [ 0 ])
+[PM2] [api](0) ✓
+```
+
+## 6. Sobreviva a um reboot
+
+Até aqui a aplicação só vive enquanto o daemon do PM2 estiver de pé. No servidor, salve a lista de processos e registre o PM2 no sistema de inicialização:
+
+```bash
+pm2 save
+pm2 startup
+```
+
+```
+[PM2] Saving current process list...
+[PM2] Successfully saved in /home/deploy/.pm2/dump.pm2
+[PM2] Init System found: systemd
+[PM2] To setup the Startup Script, copy/paste the following command:
+sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u deploy --hp /home/deploy
+```
+
+O `pm2 startup` não instala nada: ele imprime o comando para rodar com `sudo`. Repare que ele aponta para o caminho do binário do PM2. É por isso que o PM2 é global no servidor: uma cópia do `node_modules` do projeto apontaria para dentro de uma pasta que muda a cada atualização.
+
+## No dia a dia
+
+| Tarefa | Comando |
+| --- | --- |
+| Publicar o último commit | `pnpm exec pm2 deploy production` |
+| Voltar um deploy | `pnpm exec pm2 deploy production revert 1` |
+| Listar deploys anteriores | `pnpm exec pm2 deploy production list` |
+| Rodar um comando no servidor | `pnpm exec pm2 deploy production exec "pm2 logs api --lines 20 --nostream"` |
+
+O deploy sempre publica o que está em `origin/main`, então dê push antes. Um rollback faz checkout do commit anterior e roda o `post-deploy` de novo, reinstalando as dependências e recarregando a aplicação.
+
+## Quando o deploy não encontra o node ou o pnpm
+
+O PM2 roda os hooks numa sessão SSH não interativa. Se o Node do servidor veio do nvm, essa sessão normalmente não carrega ele: o `~/.bashrc` padrão do Ubuntu para cedo em shells não interativos, antes das linhas que o nvm adiciona no final. O deploy então falha com `pnpm: command not found`. Mova as linhas do nvm para antes desse `return`, ou instale o Node pelos pacotes da sua distribuição.
+
+## Fontes
+
+- [Documentação de deploy do PM2](https://pm2.keymetrics.io/docs/usage/deployment/)
+- [Arquivo ecosystem do PM2](https://pm2.keymetrics.io/docs/usage/application-declaration/)
+- [Node.js `--env-file`](https://nodejs.org/api/cli.html#--env-filefile)
+- [`process.loadEnvFile()`](https://nodejs.org/api/process.html#processloadenvfilepath)
 
 import { ArticleWrapper } from '../ArticleWrapper';
 
 export const metadata = {
-  title: 'Como Usar PM2 para Desdobrar Aplicações Node.js',
+  title: 'Deploy de aplicações Node.js com PM2 e pnpm',
   date: '2020-08-14T13:45:10.015Z',
   lang: 'pt-br',
-  tags: ['Seedling', 'javascript', 'node'],
+  tags: ['node', 'pm2', 'pnpm', 'deploy'],
   description:
-    'Um tutorial sobre como usar facilmente o PM2 para implantar seus aplicativos Node.js',
-  keywords: ['pm2', 'node.js', 'deployment', 'process manager'],
+    'Faça deploy de uma aplicação Node.js no seu próprio servidor com um comando: PM2 deploy, pnpm e o suporte a .env que já vem no Node.',
+  keywords: ['pm2', 'pnpm', 'node.js', 'deploy', 'gerenciador de processos', 'env-file'],
   authors: {
     name: 'David Costa',
   },
