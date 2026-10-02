@@ -39,6 +39,7 @@
     "copyFailed": "Couldn't copy, select the text and copy it manually"
   },
   "article": {
+    "readingTime": "{minutes} min read",
     "toc": "On this page",
     "updated": "Updated",
     "opensInNewTab": "opens in a new tab"

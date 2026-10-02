@@ -183,3 +183,19 @@ a[data-external]:focus-visible .external-link-icon {
     transition: none;
   }
 }
+
+/* Reading progress: a hairline at the very top, above the navbar, that fills
+   from the start of the article to its end. Kept faint on purpose. */
+.reading-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
+  height: 2px;
+  pointer-events: none;
+}
+.reading-progress__bar {
+  height: 100%;
+  background: var(--syntax-command);
+  opacity: 0.45;
+  transform-origin: left;
+}

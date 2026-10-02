@@ -20,7 +20,14 @@ const formatDate = (date: string, lang: string) =>
     day: 'numeric',
   });
 
-export const ArticleHeader = ({ title, date, updated, lang, tags }: FrontMatter) => {
+export const ArticleHeader = ({
+  title,
+  date,
+  updated,
+  lang,
+  tags,
+  readingTime,
+}: FrontMatter & { readingTime?: number }) => {
   const t = useTranslations('article');
 
   return (
@@ -35,6 +42,12 @@ export const ArticleHeader = ({ title, date, updated, lang, tags }: FrontMatter)
             {' · '}
             {t('updated')} <time dateTime={updated}>{formatDate(updated, lang)}</time>
           </>
+        )}
+        {readingTime && (
+          <span className="font-normal opacity-50">
+            {' · '}
+            {t('readingTime', { minutes: readingTime })}
+          </span>
         )}
       </p>
       {tags && tags?.length > 0 && (

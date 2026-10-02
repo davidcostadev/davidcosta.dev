@@ -2,6 +2,7 @@ import React from 'react';
 
 import { WithContext, BlogPosting } from 'schema-dts';
 
+import { ReadingProgress } from 'components/ReadingProgress';
 import { TableOfContents, type TocItem } from 'components/TableOfContents';
 
 import { ArticleHeader, FrontMatter } from './ArticleHeader';
@@ -11,11 +12,14 @@ export function ArticleWrapper({
   children,
   meta,
   toc = [],
+  readingTime,
 }: {
   children: React.ReactNode;
   meta: FrontMatter;
   /** The article's h2/h3 headings, exported by the MDX build (see rehypeToc) */
   toc?: TocItem[];
+  /** Minutes to read the article, exported by the MDX build (see rehypeReadingTime) */
+  readingTime?: number;
 }) {
   const formattedData = new Date(meta.date).toISOString().split('T')[0];
   const url = `${SITE_URL}${meta.alternates.canonical}`;
@@ -53,8 +57,9 @@ export function ArticleWrapper({
           </div>
         )}
       </aside>
-      <div className="min-w-0">
-        <ArticleHeader {...meta} />
+      <ReadingProgress targetSelector=".article-content" />
+      <div className="article-content min-w-0">
+        <ArticleHeader {...meta} readingTime={readingTime} />
         {children}
         <script
           type="application/ld+json"

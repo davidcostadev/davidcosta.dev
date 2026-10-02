@@ -113,6 +113,15 @@ const rehypeToc = () => (tree, file) => {
   define(tree, file, { toc: valueToEstree(toc) });
 };
 
+// Exports `readingTime`, in whole minutes, for the article header. Counts every
+// word, code included, at an average silent-reading pace.
+const WORDS_PER_MINUTE = 220;
+const rehypeReadingTime = () => (tree, file) => {
+  const words = toString(tree).split(/\s+/).filter(Boolean).length;
+  const readingTime = Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
+  define(tree, file, { readingTime: valueToEstree(readingTime) });
+};
+
 const withNextIntl = createNextIntlPlugin();
 const withMDX = mdxfrom({
   // Optionally provide remark and rehype plugins
@@ -127,6 +136,7 @@ const withMDX = mdxfrom({
     rehypePlugins: [
       rehypeSlug,
       rehypeToc,
+      rehypeReadingTime,
       [rehypePrism, { ignoreMissing: true }],
       rehypePreLanguage,
       rehypeLineDigits,
