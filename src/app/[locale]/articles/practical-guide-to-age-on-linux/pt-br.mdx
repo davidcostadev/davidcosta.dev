@@ -813,30 +813,14 @@ Recriptografar só protege as cópias que você controla. Qualquer cópia feita 
 
 ## 13. Chaves em hardware e plugins
 
-Até aqui a chave privada é uma linha de texto num arquivo: quem copia o arquivo tem a chave. A seção 8 coloca uma senha nela, mas numa máquina comprometida a senha pode ser capturada enquanto você digita. Chaves em hardware resolvem o problema na raiz: a chave privada é gerada dentro de um chip e não pode ser extraída. Para descriptografar, o dispositivo precisa estar conectado e, dependendo da configuração, pede um PIN ou um toque.
+Até aqui a chave privada é uma linha de texto num arquivo: quem copia o arquivo tem a chave. Chaves em hardware, como um YubiKey, guardam ela dentro de um chip de onde não sai, e para descriptografar o dispositivo precisa estar conectado. O age suporta essas chaves por meio de **plugins**: programas separados chamados `age-plugin-<nome>`, que o age encontra no seu `PATH` e chama quando vê uma chave daquele tipo.
 
-O age não fala com hardware sozinho. Ele delega para **plugins**: programas separados chamados `age-plugin-<nome>`, que o age encontra no seu `PATH` e chama quando vê uma chave daquele tipo. Os principais:
+{/* TODO: link para /pt-br/articles/age-hardware-keys quando ele for publicado */}
 
-| Plugin | Hardware |
-| --- | --- |
-| [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey) | YubiKey e outros tokens PIV |
-| [age-plugin-se](https://github.com/remko/age-plugin-se) | Secure Enclave da Apple, nos Macs |
-| [age-plugin-tpm](https://github.com/Foxboron/age-plugin-tpm) | O chip TPM 2.0 da maioria dos PCs (experimental) |
+Duas coisas importam para o resto deste guia:
 
-O fluxo com um YubiKey:
-
-1. O `age-plugin-yubikey` gera a chave dentro do YubiKey e escreve um **arquivo de identidade**. Diferente do `key.txt`, esse arquivo não guarda segredo nenhum: ele só diz ao age qual dispositivo e qual slot usar.
-2. A chave pública vai para o `recipients.txt` como qualquer outra. Criptografar para ela não precisa do YubiKey: qualquer pessoa continua podendo trancar arquivos para você.
-3. Para descriptografar, passe o arquivo de identidade no `-i`. O age chama o plugin, e o plugin pede ao YubiKey para abrir o envelope.
-
-Não tenho um YubiKey aqui, então esta seção não tem outputs capturados; o README do plugin traz os comandos exatos.
-
-Dois cuidados:
-
-- **Perder o dispositivo é perder a chave.** Não existe backup, e é justamente essa a ideia. Criptografe sempre para uma segunda chave também: uma chave de recuperação em papel (seção 14) ou um segundo YubiKey.
-- **Chaves em hardware deixam uma tag**, como as chaves SSH (seção 6). A especificação diz que esses tipos de destinatário permitem que quem tem a chave pública confira se um arquivo foi endereçado a ela.
-
-Plugins não servem só para hardware: o `age-plugin-pq`, que vem junto com os binários oficiais, leva as chaves pós-quânticas da seção 9 para versões antigas e outras implementações. E o [passage](https://github.com/FiloSottile/passage), um gerenciador de senhas construído sobre o age, costuma ser usado exatamente assim, com YubiKeys.
+- **Perder o dispositivo é perder a chave**, então criptografe sempre para uma segunda chave também, como a chave de recuperação em papel da seção 14.
+- **Chaves em hardware deixam uma tag**, como as chaves SSH (seção 6): quem tem a chave pública consegue saber que um arquivo foi endereçado a ela.
 
 ## 14. Backup da chave, e o teste de restauração
 

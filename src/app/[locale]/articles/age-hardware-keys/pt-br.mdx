@@ -1,0 +1,153 @@
+## Por que uma chave em hardware
+
+No [guia prático do age](/pt-br/articles/practical-guide-to-age-on-linux), a chave privada é uma linha de texto num arquivo: quem copia o arquivo tem a chave. Uma senha ajuda, mas numa máquina comprometida ela pode ser capturada enquanto você digita. Chaves em hardware resolvem o problema na raiz: a chave privada é gerada dentro de um chip e não pode ser extraída. Para descriptografar, o dispositivo precisa estar conectado e, dependendo da configuração, pede um PIN ou um toque.
+
+Este artigo configura um YubiKey como chave do age, com cada comando e o output real.
+
+{/* TODO: confirmar as versões usadas */}
+
+## Como o age fala com hardware: plugins
+
+O age não fala com hardware sozinho. Ele delega para **plugins**: programas separados chamados `age-plugin-<nome>`, que o age encontra no seu `PATH` e chama quando vê uma chave daquele tipo. Os principais para hardware:
+
+| Plugin | Hardware |
+| --- | --- |
+| [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey) | YubiKey e outros tokens PIV |
+| [age-plugin-se](https://github.com/remko/age-plugin-se) | Secure Enclave da Apple, nos Macs |
+| [age-plugin-tpm](https://github.com/Foxboron/age-plugin-tpm) | O chip TPM 2.0 da maioria dos PCs (experimental) |
+
+Plugins não servem só para hardware: o `age-plugin-pq`, que vem junto com os binários oficiais do age, leva as chaves pós-quânticas para versões antigas e outras implementações.
+
+## Antes de começar
+
+O `age-plugin-yubikey` suporta oficialmente as **séries 4 e 5 do YubiKey**, incluindo as variantes Nano e USB-C. O antigo YubiKey NEO não é suportado, nem a "Security Key by Yubico" azul, que não tem PIV.
+
+Instale o plugin pelo gerenciador de pacotes ou pela [página de releases](https://github.com/str4d/age-plugin-yubikey/releases):
+
+```bash
+# Arch Linux
+sudo pacman -S age-plugin-yubikey
+# Homebrew (macOS ou Linux)
+brew install age-plugin-yubikey
+# Qualquer sistema com Rust
+cargo install age-plugin-yubikey
+```
+
+No Debian e no Ubuntu, tem um `.deb` na página de releases.
+
+## 1. Crie a chave no YubiKey
+
+Rode o plugin sem argumentos para usar a interface de texto:
+
+```bash
+age-plugin-yubikey
+```
+
+```
+TODO: colar o output da configuração
+```
+
+O plugin cuida sozinho de dois detalhes de segurança:
+
+- Se o YubiKey ainda tem o **PIN padrão**, ele pede para você trocar, e define o PUK (o código que desbloqueia um PIN bloqueado) com o mesmo valor.
+- Se ele ainda tem a **management key padrão**, ele troca por uma aleatória, guardada no YubiKey e protegida pelo PIN.
+
+A interface também pergunta as políticas de PIN e de toque: se descriptografar pede o PIN toda vez ou uma vez por sessão, e se exige um toque. O `age-plugin-yubikey --help` lista as opções, se você preferir passá-las como flags com `--generate`.
+
+## 2. O arquivo de identidade
+
+A chave privada nunca sai do YubiKey. O que o age precisa no disco é um **arquivo de identidade**, que só diz qual YubiKey e qual slot usar:
+
+```bash
+age-plugin-yubikey --identity --slot 1 > ~/.config/age/yubikey-identity.txt
+cat ~/.config/age/yubikey-identity.txt
+```
+
+```
+TODO: colar o arquivo de identidade (não tem segredo, mas confira antes de publicar)
+```
+
+{/* TODO: ajustar o --slot para o slot usado na configuração */}
+
+Diferente do `key.txt`, esse arquivo não guarda segredo nenhum: copiá-lo sem o YubiKey não dá acesso a nada. Se você perdê-lo, o `--identity` recria a partir do dispositivo.
+
+## 3. Criptografando para o YubiKey
+
+Liste as chaves públicas dos YubiKeys conectados e adicione ao seu arquivo de destinatários:
+
+```bash
+age-plugin-yubikey --list
+```
+
+```
+TODO: colar o output do --list
+```
+
+```bash
+age-plugin-yubikey --list >> ~/.config/age/recipients.txt
+age -R ~/.config/age/recipients.txt -o notas.txt.age notas.txt
+```
+
+Criptografar não precisa do YubiKey, nem do plugin, com um age recente: basta a chave pública, então qualquer pessoa continua podendo trancar arquivos para você.
+
+## 4. Descriptografando com o YubiKey
+
+Passe o arquivo de identidade no `-i`. O age chama o plugin, e o plugin pede ao YubiKey para abrir o envelope:
+
+```bash
+age -d -i ~/.config/age/yubikey-identity.txt notas.txt.age
+```
+
+```
+TODO: colar o output, incluindo os pedidos de PIN e de toque
+```
+
+Com o YubiKey desconectado:
+
+```
+TODO: colar o erro com o YubiKey desconectado
+```
+
+### O cache do PIN
+
+Com a política de PIN `once`, o plugin mantém a sessão do PIN aberta entre uma descriptografia e outra, então você digita o PIN uma vez só. A sessão termina quando você desconecta o YubiKey, quando outro applet, como o FIDO2, é usado, ou quando você gera uma identidade nova. A série 4 do YubiKey não mantém esse cache, então pede o PIN toda vez.
+
+## Dois cuidados
+
+- **Perder o dispositivo é perder a chave.** Não existe backup, e é justamente essa a ideia. Criptografe sempre para uma segunda chave também: uma chave de recuperação em papel ([seção 14 do guia](/pt-br/articles/practical-guide-to-age-on-linux#14-backup-da-chave-e-o-teste-de-restauração)) ou um segundo YubiKey.
+- **Chaves em hardware deixam uma tag.** A [especificação](https://c2sp.org/age) diz que esses tipos de destinatário permitem que quem tem a chave pública confira se um arquivo foi endereçado a ela, a mesma troca das chaves SSH.
+
+## Para ir além
+
+O [passage](https://github.com/FiloSottile/passage), um gerenciador de senhas construído sobre o age, costuma ser usado exatamente assim, com YubiKeys. O Filippo Valsorda descreve a configuração dele em [My age+YubiKeys Password Management Solution](https://words.filippo.io/dispatches/passage/).
+
+## Fontes
+
+- [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey)
+- [awesome-age: plugins, ferramentas e integrações](https://github.com/FiloSottile/awesome-age)
+- [Especificação do formato age](https://c2sp.org/age)
+
+import { ArticleWrapper } from '../ArticleWrapper';
+
+export const metadata = {
+  title: 'Chaves em hardware para o age: YubiKey e plugins',
+  date: '2026-10-02T12:00:00.000Z',
+  lang: 'pt-br',
+  draft: true,
+  tags: ['linux', 'security', 'cryptography'],
+  description:
+    'Guarde a chave privada do age dentro de um YubiKey, onde ela não pode ser copiada: plugins, configuração, criptografar, descriptografar e os cuidados que vêm junto.',
+  keywords: ['age', 'yubikey', 'chave em hardware', 'age-plugin-yubikey', 'criptografia', 'piv'],
+  authors: {
+    name: 'David Costa',
+  },
+  alternates: {
+    canonical: '/pt-br/articles/age-hardware-keys',
+  },
+};
+
+export default ({ children }) => (
+  <ArticleWrapper meta={metadata} toc={toc}>
+    {children}
+  </ArticleWrapper>
+);

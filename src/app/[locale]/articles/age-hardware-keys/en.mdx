@@ -1,0 +1,153 @@
+## Why a hardware key
+
+In the [practical guide to age](/en/articles/practical-guide-to-age-on-linux), the private key is a line of text in a file: whoever copies the file has the key. A passphrase helps, but on a compromised machine it can be captured as you type it. Hardware keys solve the root problem: the private key is generated inside a chip and can't be extracted. Decrypting requires the device plugged in and, depending on its settings, a PIN or a touch.
+
+This article sets up a YubiKey as an age key, with every command and its real output.
+
+{/* TODO: confirm the versions you ran with */}
+
+## How age talks to hardware: plugins
+
+age doesn't talk to hardware itself. It delegates to **plugins**: separate programs named `age-plugin-<name>` that age finds in your `PATH` and calls when it sees a key of their type. The main ones for hardware:
+
+| Plugin | Hardware |
+| --- | --- |
+| [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey) | YubiKey and other PIV tokens |
+| [age-plugin-se](https://github.com/remko/age-plugin-se) | Apple's Secure Enclave, on Macs |
+| [age-plugin-tpm](https://github.com/Foxboron/age-plugin-tpm) | The TPM 2.0 chip in most PCs (experimental) |
+
+Plugins aren't only for hardware: `age-plugin-pq`, which ships with the official age binaries, adds post-quantum keys to older versions and other implementations.
+
+## Before you start
+
+`age-plugin-yubikey` officially supports the **YubiKey 4 and 5 series**, Nano and USB-C variants included. The older YubiKey NEO isn't supported, and neither is the blue "Security Key by Yubico", which has no PIV.
+
+Install the plugin from your package manager or from the [releases page](https://github.com/str4d/age-plugin-yubikey/releases):
+
+```bash
+# Arch Linux
+sudo pacman -S age-plugin-yubikey
+# Homebrew (macOS or Linux)
+brew install age-plugin-yubikey
+# Any system with Rust
+cargo install age-plugin-yubikey
+```
+
+On Debian and Ubuntu, there's a `.deb` on the releases page.
+
+## 1. Create the key on the YubiKey
+
+Run the plugin without arguments for its text interface:
+
+```bash
+age-plugin-yubikey
+```
+
+```
+TODO: paste the output of the setup
+```
+
+The plugin takes care of two security details on its own:
+
+- If the YubiKey still has the **default PIN**, it asks you to change it, and sets the PUK (the code that unblocks a locked PIN) to the same value.
+- If it still has the **default management key**, it replaces it with a random one, stored on the YubiKey behind the PIN.
+
+The interface also asks for the PIN and touch policies: whether decrypting asks for the PIN every time or once per session, and whether it needs a touch. `age-plugin-yubikey --help` lists the options if you'd rather pass them as flags with `--generate`.
+
+## 2. The identity file
+
+The private key never leaves the YubiKey. What age needs on disk is an **identity file**, which only says which YubiKey and slot to use:
+
+```bash
+age-plugin-yubikey --identity --slot 1 > ~/.config/age/yubikey-identity.txt
+cat ~/.config/age/yubikey-identity.txt
+```
+
+```
+TODO: paste the identity file (it holds no secret, but check before publishing)
+```
+
+{/* TODO: adjust --slot to the slot the setup used */}
+
+Unlike `key.txt`, this file holds no secret: copying it without the YubiKey gets you nothing. If you lose it, `--identity` recreates it from the device.
+
+## 3. Encrypting to the YubiKey
+
+List the public keys on the connected YubiKeys and add them to your recipients file:
+
+```bash
+age-plugin-yubikey --list
+```
+
+```
+TODO: paste the output of --list
+```
+
+```bash
+age-plugin-yubikey --list >> ~/.config/age/recipients.txt
+age -R ~/.config/age/recipients.txt -o notes.txt.age notes.txt
+```
+
+Encrypting doesn't need the YubiKey, or even the plugin with a recent age: the public key is all it takes, so anyone can still lock files for you.
+
+## 4. Decrypting with the YubiKey
+
+Pass the identity file to `-i`. age calls the plugin, and the plugin asks the YubiKey to open the envelope:
+
+```bash
+age -d -i ~/.config/age/yubikey-identity.txt notes.txt.age
+```
+
+```
+TODO: paste the output, including the PIN and touch prompts
+```
+
+Without the YubiKey plugged in:
+
+```
+TODO: paste the error with the YubiKey unplugged
+```
+
+### The PIN cache
+
+With the PIN policy `once`, the plugin keeps the YubiKey's PIN session open between decryptions, so you type the PIN once. The session ends when you unplug the YubiKey, when another applet such as FIDO2 is used, or when you generate a new identity. The YubiKey 4 series doesn't keep this cache, so it asks every time.
+
+## Two cautions
+
+- **Losing the device means losing the key.** There's no backup, and that's the point. Always encrypt to a second key too: a paper recovery key ([section 14 of the guide](/en/articles/practical-guide-to-age-on-linux#14-backing-up-your-key-and-testing-the-restore)) or a second YubiKey.
+- **Hardware keys leave a tag.** The [specification](https://c2sp.org/age) says these recipient types let anyone holding the public key check whether a file was addressed to it, the same trade-off as SSH keys.
+
+## Going further
+
+[passage](https://github.com/FiloSottile/passage), a password manager built on age, is often used exactly this way, with YubiKeys. Filippo Valsorda describes his setup in [My age+YubiKeys Password Management Solution](https://words.filippo.io/dispatches/passage/).
+
+## Sources
+
+- [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey)
+- [awesome-age: plugins, tools and integrations](https://github.com/FiloSottile/awesome-age)
+- [age format specification](https://c2sp.org/age)
+
+import { ArticleWrapper } from '../ArticleWrapper';
+
+export const metadata = {
+  title: 'Hardware keys for age: YubiKey and plugins',
+  date: '2026-10-02T12:00:00.000Z',
+  lang: 'en',
+  draft: true,
+  tags: ['linux', 'security', 'cryptography'],
+  description:
+    'Keep your age private key inside a YubiKey, where it can’t be copied: plugins, setup, encrypting, decrypting and the cautions that come with it.',
+  keywords: ['age', 'yubikey', 'hardware key', 'age-plugin-yubikey', 'encryption', 'piv'],
+  authors: {
+    name: 'David Costa',
+  },
+  alternates: {
+    canonical: '/en/articles/age-hardware-keys',
+  },
+};
+
+export default ({ children }) => (
+  <ArticleWrapper meta={metadata} toc={toc}>
+    {children}
+  </ArticleWrapper>
+);

@@ -813,30 +813,14 @@ Re-encrypting only protects the copies you control. Any copy made earlier (a bac
 
 ## 13. Hardware keys and plugins
 
-So far the private key is a line of text in a file: whoever copies the file has the key. Section 8 puts a passphrase on it, but on a compromised machine the passphrase can be captured as you type it. Hardware keys solve the root problem: the private key is generated inside a chip and can't be extracted. Decrypting requires the device plugged in and, depending on its settings, a PIN or a touch.
+So far the private key is a line of text in a file: whoever copies the file has the key. Hardware keys, such as a YubiKey, keep it inside a chip it can't leave, and decrypting needs the device plugged in. age supports them through **plugins**: separate programs named `age-plugin-<name>` that age finds in your `PATH` and calls when it sees a key of their type.
 
-age doesn't talk to hardware itself. It delegates to **plugins**: separate programs named `age-plugin-<name>` that age finds in your `PATH` and calls when it sees a key of their type. The main ones:
+{/* TODO: link to /en/articles/age-hardware-keys once it's published */}
 
-| Plugin | Hardware |
-| --- | --- |
-| [age-plugin-yubikey](https://github.com/str4d/age-plugin-yubikey) | YubiKey and other PIV tokens |
-| [age-plugin-se](https://github.com/remko/age-plugin-se) | Apple's Secure Enclave, on Macs |
-| [age-plugin-tpm](https://github.com/Foxboron/age-plugin-tpm) | The TPM 2.0 chip in most PCs (experimental) |
+Two things matter for the rest of this guide:
 
-The flow with a YubiKey:
-
-1. `age-plugin-yubikey` generates the key inside the YubiKey and writes an **identity file**. Unlike `key.txt`, this file holds no secret: it only tells age which device and slot to use.
-2. The public key goes into `recipients.txt` like any other. Encrypting to it doesn't need the YubiKey: anyone can still lock files for you.
-3. To decrypt, pass the identity file to `-i`. age calls the plugin, and the plugin asks the YubiKey to open the envelope.
-
-I don't have a YubiKey at hand, so this section has no captured outputs; the plugin's README has the exact commands.
-
-Two cautions:
-
-- **Losing the device means losing the key.** There's no backup, and that's the point. Always encrypt to a second key too: a paper recovery key (section 14) or a second YubiKey.
-- **Hardware keys leave a tag**, like SSH keys (section 6). The specification says these recipient types let anyone holding the public key check whether a file was addressed to it.
-
-Plugins aren't only for hardware: `age-plugin-pq`, which ships with the official binaries, adds the post-quantum keys from section 9 to older versions and other implementations. And [passage](https://github.com/FiloSottile/passage), a password manager built on age, is often used exactly this way, with YubiKeys.
+- **Losing the device means losing the key**, so always encrypt to a second key too, like the paper recovery key from section 14.
+- **Hardware keys leave a tag**, like SSH keys (section 6): whoever has the public key can tell a file was addressed to it.
 
 ## 14. Backing up your key, and testing the restore
 
