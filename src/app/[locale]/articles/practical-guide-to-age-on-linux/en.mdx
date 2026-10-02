@@ -183,7 +183,7 @@ age -r age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4 \
 Nothing shows up on screen. In the UNIX world, silence means success.
 
 - `-r` (recipient) says **who** you're encrypting for: the public key.
-- `-o` (output) is the output file. Without it, the result goes to standard output.
+- `-o` (output) is the output file. Without it, the result goes to standard output: that's what makes pipes and `>` work, but on a terminal age refuses to print binary (see [Errors you'll run into](#errors-youll-run-into)). In practice, always end the command with `-o`, a `>` or a pipe.
 - The last argument is the input. Without it, age reads from standard input (which is why it works in pipes).
 
 ### What happened under the hood
@@ -271,6 +271,7 @@ age never silently hands you tampered content: if a byte changed, it stops.
 age: error: refusing to output binary to the terminal
 age: hint: did you mean to use -a/--armor?
 age: hint: force anyway with "-o -"
+age: report unexpected or unhelpful errors at https://filippo.io/age/report
 ```
 
 Protection against flooding your screen with binary garbage. Use `-o file`, a pipe, or `-a` (section 7).
@@ -352,7 +353,16 @@ age -r age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4 \
     -o multi.age notes.txt
 ```
 
-With many keys, the line becomes unreadable. It's better to keep the public keys in a file and use `-R` (uppercase):
+With many keys, the line becomes unreadable. It's better to keep the public keys in a file and use `-R` (uppercase).
+
+To build that file from your own key, use `age-keygen -y`, which prints the public key of a private key (section 1). `>>` appends to the end of the file, so run it once per key, with a comment above to say whose it is:
+
+```bash
+echo "# David (laptop)" >> ~/.config/age/recipients.txt
+age-keygen -y ~/.config/age/key.txt >> ~/.config/age/recipients.txt
+```
+
+For someone else's key, they send you their `age1...` line (it's public) and you append it the same way. An SSH public key (the line from a `.pub` file) also works (section 6). The result:
 
 ```bash
 cat ~/.config/age/recipients.txt
