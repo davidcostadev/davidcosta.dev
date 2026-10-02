@@ -18,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   );
 
-  // getPosts already leaves drafts out
+  // getPosts already leaves drafts out of production builds
   const posts = await Promise.all(
     locales.map((locale) => getPosts({ lang: locale, limit: Number.POSITIVE_INFINITY })),
   );

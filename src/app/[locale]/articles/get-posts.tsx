@@ -32,7 +32,9 @@ export async function getPosts({ limit = 10, lang }: GetPostsProps): Promise<Pos
     try {
       const { metadata } = (await articles(key)) as { metadata: Omit<Post, 'slug' | 'lang'> };
 
-      if (!metadata.draft) {
+      // Like the article pages, drafts are listed in dev for previewing and
+      // don't exist in production
+      if (!metadata.draft || process.env.NODE_ENV !== 'production') {
         posts.push({ slug, lang, ...metadata });
       }
     } catch (error) {

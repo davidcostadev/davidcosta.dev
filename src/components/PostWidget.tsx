@@ -8,6 +8,7 @@ interface Post {
   lang: string;
   tags: string[];
   description: string;
+  draft?: boolean;
 }
 
 type PostWidgetProps = {
@@ -32,6 +33,11 @@ export const PostWidget = ({ post }: PostWidgetProps) => {
         >
           {post.title}
         </Link>
+        {post.draft && (
+          <span className="ml-3 align-middle rounded-lg px-2 py-0.5 text-sm font-body font-bold uppercase tracking-wide bg-yellow-100 text-yellow-800 dark:bg-yellow-400/20 dark:text-yellow-300">
+            Draft
+          </span>
+        )}
       </h4>
       <p className="text-lg font-body my-4">{post.description}</p>
       <div className="flex flex-wrap gap-2">
