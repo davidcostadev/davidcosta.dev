@@ -88,15 +88,17 @@ article header + h2[class] {
   font-size: 1.3rem;
 }
 
-/* External article links: an arrow after the link on hover, laid over the
-   following space so the text never shifts */
+/* External article links: an arrow after the link on hover. The link keeps
+   room for it at all times, so the arrow never covers the next word and the
+   text never shifts when it appears */
 a[data-external] {
   position: relative;
+  padding-right: 0.85em;
 }
 .external-link-icon {
   position: absolute;
   top: 0.1em;
-  right: -0.95em;
+  right: 0;
   width: 0.75em;
   height: 0.75em;
   opacity: 0;
