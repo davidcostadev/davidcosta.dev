@@ -2,9 +2,7 @@
 
 No [guia prático do age](/pt-br/articles/practical-guide-to-age-on-linux), a chave privada é uma linha de texto num arquivo: quem copia o arquivo tem a chave. Uma senha ajuda, mas numa máquina comprometida ela pode ser capturada enquanto você digita. Chaves em hardware resolvem o problema na raiz: a chave privada é gerada dentro de um chip e não pode ser extraída. Para descriptografar, o dispositivo precisa estar conectado e, dependendo da configuração, pede um PIN ou um toque.
 
-Este artigo configura um YubiKey como chave do age, com cada comando e o output real.
-
-{/* TODO: confirmar as versões usadas */}
+Este artigo mostra, passo a passo, como configurar um YubiKey como chave do age. Os comandos seguem a documentação do plugin; os outputs não foram capturados aqui, então compare cada passo com o que o seu YubiKey mostrar.
 
 ## Como o age fala com hardware: plugins
 
@@ -43,10 +41,6 @@ Rode o plugin sem argumentos para usar a interface de texto:
 age-plugin-yubikey
 ```
 
-```
-TODO: colar o output da configuração
-```
-
 O plugin cuida sozinho de dois detalhes de segurança:
 
 - Se o YubiKey ainda tem o **PIN padrão**, ele pede para você trocar, e define o PUK (o código que desbloqueia um PIN bloqueado) com o mesmo valor.
@@ -59,17 +53,11 @@ A interface também pergunta as políticas de PIN e de toque: se descriptografar
 A chave privada nunca sai do YubiKey. O que o age precisa no disco é um **arquivo de identidade**, que só diz qual YubiKey e qual slot usar:
 
 ```bash
-age-plugin-yubikey --identity --slot 1 > ~/.config/age/yubikey-identity.txt
+age-plugin-yubikey --identity --slot SLOT > ~/.config/age/yubikey-identity.txt
 cat ~/.config/age/yubikey-identity.txt
 ```
 
-```
-TODO: colar o arquivo de identidade (não tem segredo, mas confira antes de publicar)
-```
-
-{/* TODO: ajustar o --slot para o slot usado na configuração */}
-
-Diferente do `key.txt`, esse arquivo não guarda segredo nenhum: copiá-lo sem o YubiKey não dá acesso a nada. Se você perdê-lo, o `--identity` recria a partir do dispositivo.
+Troque `SLOT` pelo slot escolhido na configuração. Diferente do `key.txt`, esse arquivo não guarda segredo nenhum: copiá-lo sem o YubiKey não dá acesso a nada. Se você perdê-lo, o `--identity` recria a partir do dispositivo.
 
 ## 3. Criptografando para o YubiKey
 
@@ -77,10 +65,6 @@ Liste as chaves públicas dos YubiKeys conectados e adicione ao seu arquivo de d
 
 ```bash
 age-plugin-yubikey --list
-```
-
-```
-TODO: colar o output do --list
 ```
 
 ```bash
@@ -96,16 +80,6 @@ Passe o arquivo de identidade no `-i`. O age chama o plugin, e o plugin pede ao 
 
 ```bash
 age -d -i ~/.config/age/yubikey-identity.txt notas.txt.age
-```
-
-```
-TODO: colar o output, incluindo os pedidos de PIN e de toque
-```
-
-Com o YubiKey desconectado:
-
-```
-TODO: colar o erro com o YubiKey desconectado
 ```
 
 ### O cache do PIN
@@ -133,7 +107,6 @@ export const metadata = {
   title: 'Chaves em hardware para o age: YubiKey e plugins',
   date: '2026-10-02T12:00:00.000Z',
   lang: 'pt-br',
-  draft: true,
   tags: ['linux', 'security', 'cryptography'],
   description:
     'Guarde a chave privada do age dentro de um YubiKey, onde ela não pode ser copiada: plugins, configuração, criptografar, descriptografar e os cuidados que vêm junto.',

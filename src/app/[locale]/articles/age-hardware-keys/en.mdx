@@ -2,9 +2,7 @@
 
 In the [practical guide to age](/en/articles/practical-guide-to-age-on-linux), the private key is a line of text in a file: whoever copies the file has the key. A passphrase helps, but on a compromised machine it can be captured as you type it. Hardware keys solve the root problem: the private key is generated inside a chip and can't be extracted. Decrypting requires the device plugged in and, depending on its settings, a PIN or a touch.
 
-This article sets up a YubiKey as an age key, with every command and its real output.
-
-{/* TODO: confirm the versions you ran with */}
+This article walks through setting up a YubiKey as an age key. The commands follow the plugin's documentation; the outputs aren't captured here, so compare each step with what your own YubiKey shows.
 
 ## How age talks to hardware: plugins
 
@@ -43,10 +41,6 @@ Run the plugin without arguments for its text interface:
 age-plugin-yubikey
 ```
 
-```
-TODO: paste the output of the setup
-```
-
 The plugin takes care of two security details on its own:
 
 - If the YubiKey still has the **default PIN**, it asks you to change it, and sets the PUK (the code that unblocks a locked PIN) to the same value.
@@ -59,17 +53,11 @@ The interface also asks for the PIN and touch policies: whether decrypting asks 
 The private key never leaves the YubiKey. What age needs on disk is an **identity file**, which only says which YubiKey and slot to use:
 
 ```bash
-age-plugin-yubikey --identity --slot 1 > ~/.config/age/yubikey-identity.txt
+age-plugin-yubikey --identity --slot SLOT > ~/.config/age/yubikey-identity.txt
 cat ~/.config/age/yubikey-identity.txt
 ```
 
-```
-TODO: paste the identity file (it holds no secret, but check before publishing)
-```
-
-{/* TODO: adjust --slot to the slot the setup used */}
-
-Unlike `key.txt`, this file holds no secret: copying it without the YubiKey gets you nothing. If you lose it, `--identity` recreates it from the device.
+Replace `SLOT` with the slot you picked during setup. Unlike `key.txt`, this file holds no secret: copying it without the YubiKey gets you nothing. If you lose it, `--identity` recreates it from the device.
 
 ## 3. Encrypting to the YubiKey
 
@@ -77,10 +65,6 @@ List the public keys on the connected YubiKeys and add them to your recipients f
 
 ```bash
 age-plugin-yubikey --list
-```
-
-```
-TODO: paste the output of --list
 ```
 
 ```bash
@@ -96,16 +80,6 @@ Pass the identity file to `-i`. age calls the plugin, and the plugin asks the Yu
 
 ```bash
 age -d -i ~/.config/age/yubikey-identity.txt notes.txt.age
-```
-
-```
-TODO: paste the output, including the PIN and touch prompts
-```
-
-Without the YubiKey plugged in:
-
-```
-TODO: paste the error with the YubiKey unplugged
 ```
 
 ### The PIN cache
@@ -133,7 +107,6 @@ export const metadata = {
   title: 'Hardware keys for age: YubiKey and plugins',
   date: '2026-10-02T12:00:00.000Z',
   lang: 'en',
-  draft: true,
   tags: ['linux', 'security', 'cryptography'],
   description:
     'Keep your age private key inside a YubiKey, where it can’t be copied: plugins, setup, encrypting, decrypting and the cautions that come with it.',
