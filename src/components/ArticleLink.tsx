@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 
 const SITE_ORIGIN = 'https://davidcosta.dev';
 
-/** Article link; external ones open in a new tab and show an icon on hover. */
+/** Article link; external ones open in a new tab and end with an arrow icon. */
 export function ArticleLink({ href = '', children, ...props }: ComponentProps<'a'>) {
   const t = useTranslations('article');
   const external = /^https?:\/\//.test(href) && !href.startsWith(SITE_ORIGIN);
