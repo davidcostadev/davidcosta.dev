@@ -186,6 +186,19 @@ Nothing shows up on screen. In the UNIX world, silence means success.
 - `-o` (output) is the output file. Without it, the result goes to standard output: that's what makes pipes and `>` work, but on a terminal age refuses to print binary (see [Errors you'll run into](#errors-youll-run-into)). In practice, always end the command with `-o`, a `>` or a pipe.
 - The last argument is the input. Without it, age reads from standard input (which is why it works in pipes).
 
+A shortcut for encrypting to yourself: instead of the public key, pass your own key file with `-i`. In that case `-e` (encrypt) is required, otherwise age assumes you forgot `-d`:
+
+```
+age: error: -i/--identity and -j can't be used in encryption mode unless symmetric encryption is explicitly selected with -e/--encrypt
+age: hint: did you forget to specify -d/--decrypt?
+```
+
+```bash
+age -e -i ~/.config/age/key.txt -o notes.txt.age notes.txt
+```
+
+The result is the same: a file encrypted to your public key, which age derives from the private one.
+
 ### What happened under the hood
 
 1. age drew a 16-byte **file key**, unique to this file.
@@ -274,7 +287,7 @@ age: hint: force anyway with "-o -"
 age: report unexpected or unhelpful errors at https://filippo.io/age/report
 ```
 
-Protection against flooding your screen with binary garbage. Use `-o file`, a pipe, or `-a` (section 7).
+Protection against flooding your screen with binary garbage. Use `-o file`, a pipe, or `-a` (section 7). The hint's `-o -` means "standard output": it doesn't save anything, it just forces the encrypted bytes onto the screen.
 
 **Watch out:** age **overwrites** the `-o` file without asking, and **doesn't delete** the original. After encrypting, `notes.txt` is still there in plain text until you remove it, and removing it properly takes more than `rm` (section 14).
 
@@ -355,7 +368,7 @@ age -r age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4 \
 
 With many keys, the line becomes unreadable. It's better to keep the public keys in a file and use `-R` (uppercase).
 
-To build that file from your own key, use `age-keygen -y`, which prints the public key of a private key (section 1). `>>` appends to the end of the file, so run it once per key, with a comment above to say whose it is:
+To build that file from your own key, use `age-keygen -y`, which prints the public key of a private key (section 1). `>>` appends to the end of the file, so run it once per key, with a comment above to say whose it is (a single `>` would replace the file, which only works for the first key):
 
 ```bash
 echo "# David (laptop)" >> ~/.config/age/recipients.txt

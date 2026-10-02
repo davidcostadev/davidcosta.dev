@@ -186,6 +186,19 @@ Não aparece nada na tela. No mundo UNIX, silêncio significa sucesso.
 - `-o` (output) é o arquivo de saída. Sem ele, o resultado vai para a saída padrão: é isso que faz pipes e `>` funcionarem, mas num terminal o age se recusa a imprimir binário (veja [Erros que você vai encontrar](#erros-que-você-vai-encontrar)). Na prática, sempre termine o comando com `-o`, um `>` ou um pipe.
 - O último argumento é a entrada. Sem ele, o age lê da entrada padrão (por isso funciona em pipes).
 
+Um atalho para criptografar para você mesmo: em vez da chave pública, passe o seu próprio arquivo de chave com `-i`. Nesse caso o `-e` (encrypt) é obrigatório, senão o age acha que você esqueceu o `-d`:
+
+```
+age: error: -i/--identity and -j can't be used in encryption mode unless symmetric encryption is explicitly selected with -e/--encrypt
+age: hint: did you forget to specify -d/--decrypt?
+```
+
+```bash
+age -e -i ~/.config/age/key.txt -o notas.txt.age notas.txt
+```
+
+O resultado é o mesmo: um arquivo criptografado para a sua chave pública, que o age deriva da privada.
+
 ### O que aconteceu por baixo
 
 1. O age sorteou uma **file key** de 16 bytes, exclusiva deste arquivo.
@@ -274,7 +287,7 @@ age: hint: force anyway with "-o -"
 age: report unexpected or unhelpful errors at https://filippo.io/age/report
 ```
 
-Proteção contra encher a tela de lixo binário. Use `-o arquivo`, um pipe, ou `-a` (seção 7).
+Proteção contra encher a tela de lixo binário. Use `-o arquivo`, um pipe, ou `-a` (seção 7). O `-o -` da dica significa "saída padrão": ele não salva nada, só força os bytes criptografados na tela.
 
 **Atenção:** o age **sobrescreve** o arquivo de `-o` sem perguntar, e **não apaga** o original. Depois de criptografar, `notas.txt` continua lá em texto puro até você removê-lo, e removê-lo direito exige mais que um `rm` (seção 14).
 
@@ -355,7 +368,7 @@ age -r age1ydslw3ud3lhduft004quqne7qtyqjt3df7wj6dw5puurfqayzymq8u6zg4 \
 
 Com muitas chaves, a linha fica ilegível. Melhor guardar as chaves públicas num arquivo e usar `-R` (maiúsculo).
 
-Para montar esse arquivo a partir da sua chave, use o `age-keygen -y`, que imprime a chave pública de uma chave privada (seção 1). O `>>` acrescenta ao final do arquivo, então rode uma vez por chave, com um comentário em cima dizendo de quem ela é:
+Para montar esse arquivo a partir da sua chave, use o `age-keygen -y`, que imprime a chave pública de uma chave privada (seção 1). O `>>` acrescenta ao final do arquivo, então rode uma vez por chave, com um comentário em cima dizendo de quem ela é (um `>` só substituiria o arquivo, o que só serve para a primeira chave):
 
 ```bash
 echo "# David (laptop)" >> ~/.config/age/recipients.txt
