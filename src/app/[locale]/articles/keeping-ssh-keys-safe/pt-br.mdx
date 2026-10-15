@@ -7,9 +7,9 @@ Os comandos de Linux foram rodados com o OpenSSH 10.2p1 no Ubuntu 26.04, e os ou
 ## O que vale em todo sistema
 
 1. **Use Ed25519**, ou uma chave em hardware (`ed25519-sk`) se você tem uma chave FIDO2.
-2. **Ponha passphrase em toda chave de uso pessoal.** Sem ela, o arquivo é a credencial inteira.
+2. **Ponha passphrase em toda chave de uso pessoal.** Sem ela, o arquivo é a credencial inteira. O [outro artigo](/pt-br/articles/how-ssh-keys-work#como-saber-se-uma-chave-tem-passphrase) mostra como conferir as suas.
 3. **Use uma chave por dispositivo.** Notebook, desktop e servidor de CI, cada um com a sua.
-4. **Deixe o agente guardar a chave por tempo limitado**, não o dia inteiro.
+4. **Deixe o agente guardar a chave por tempo limitado**, como um dia de trabalho, e peça **confirmação a cada uso** se agentes de IA rodam comandos no seu terminal.
 5. **Diga qual chave usar em cada servidor** e não faça agent forwarding.
 6. **Confira a host key** na primeira conexão e quando ela mudar.
 7. **Criptografe o disco**: LUKS, FileVault ou BitLocker.
@@ -34,13 +34,13 @@ Host interno
 Host *
   IdentitiesOnly yes
   ForwardAgent no
-  AddKeysToAgent 1h
+  AddKeysToAgent 8h
 ```
 
 - `IdentitiesOnly yes` faz o cliente oferecer só a chave configurada para aquele servidor (ou as padrão, se nenhuma for), em vez de todas as que estão no agente.
 - `ForwardAgent no` já é o padrão, mas deixar escrito evita que um bloco anterior ligue sem você perceber.
 - `ProxyJump servidor` faz o `ssh interno` atravessar o `servidor` sem levar o seu agente até ele.
-- `AddKeysToAgent 1h` põe a chave no agente na primeira vez que você digita a passphrase, e tira depois de uma hora.
+- `AddKeysToAgent 8h` põe a chave no agente na primeira vez que você digita a passphrase, e tira depois de oito horas: você digita uma vez por dia de trabalho, e a chave não passa a noite no agente.
 
 O `Host *` fica **no fim** porque, no `ssh_config`, vale o primeiro valor encontrado para cada opção: os blocos específicos vêm antes, o genérico completa o que faltou. Para ver o resultado final de um host, use `ssh -G`:
 
@@ -53,7 +53,7 @@ user deploy
 hostname 203.0.113.10
 identitiesonly yes
 identityfile ~/.ssh/id_ed25519
-addkeystoagent 3600
+addkeystoagent 28800
 forwardagent no
 ```
 
@@ -75,9 +75,29 @@ A passphrase protege o arquivo da chave, mas o disco tem mais coisa: o `known_ho
 chmod 700 ~/.ssh
 chmod 600 ~/.ssh/id_ed25519 ~/.ssh/config ~/.ssh/authorized_keys
 chmod 644 ~/.ssh/id_ed25519.pub
+ls -la ~/.ssh
 ```
 
-A chave privada tem que ser legível só por você, senão o cliente a ignora (o aviso de "UNPROTECTED PRIVATE KEY FILE" está no [outro artigo](/pt-br/articles/how-ssh-keys-work#permissões)). No servidor, o `sshd` também recusa um `authorized_keys`, ou uma pasta `~/.ssh`, em que outros usuários possam escrever.
+```
+total 20
+drwx------ 2 user user 140 Oct 15 13:14 .
+drwxrwxr-x 3 user user  60 Oct 15 13:14 ..
+-rw------- 1 user user 101 Oct 15 13:14 authorized_keys
+-rw------- 1 user user  28 Oct 15 13:14 config
+-rw------- 1 user user 464 Oct 15 13:14 id_ed25519
+-rw-r--r-- 1 user user 101 Oct 15 13:14 id_ed25519.pub
+-rw-r--r-- 1 user user  37 Oct 15 13:14 known_hosts
+```
+
+| Arquivo                                   | Permissão          | Quem acessa              |
+| ----------------------------------------- | ------------------ | ------------------------ |
+| `~/.ssh/`                                 | `drwx------` (700) | Só você entra na pasta   |
+| `id_ed25519`, `config`, `authorized_keys` | `-rw-------` (600) | Só você lê e escreve     |
+| `id_ed25519.pub`, `known_hosts`           | `-rw-r--r--` (644) | Você escreve, todos leem |
+
+Os três grupos de letras são o que o dono, o grupo e os outros podem fazer: `r` ler, `w` escrever, `x` executar (numa pasta, entrar). O [outro artigo](/pt-br/articles/how-ssh-keys-work#permissões) explica como ler isso em detalhe, e mostra o aviso de "UNPROTECTED PRIVATE KEY FILE" que o cliente dá quando a chave privada está aberta demais.
+
+O `known_hosts` não tem segredo, mas mostra onde você conecta. Se a máquina tem outros usuários, um `chmod 600` nele também não faz mal. No servidor, o `sshd` recusa um `authorized_keys`, ou uma pasta `~/.ssh`, em que outros usuários possam escrever.
 
 ### Qual agente está rodando
 
@@ -93,26 +113,77 @@ echo $SSH_AUTH_SOCK
 
 Esse é o do GNOME (`gcr-ssh-agent`), que usa o `ssh-agent` do OpenSSH por baixo e pede a passphrase numa janela. No KDE, costuma ser o `ssh-agent` com o `ksshaskpass`. Se a variável vier vazia, não tem agente, e você pode iniciar um na sessão do terminal com `eval "$(ssh-agent -s)"`.
 
-### Tempo de vida e confirmação
+### A passphrase no chaveiro do sistema
 
-O `AddKeysToAgent 1h` do config de partida resolve o tempo de vida. Na mão, o equivalente é:
+No macOS, o Keychain guarda a passphrase e devolve a chave ao agente sozinho depois do login. No Linux, dá para ter o mesmo de algumas formas, todas com a troca da seção do macOS: a passphrase deixa de ser digitada e passa a ser protegida pela senha do seu login, ou do seu cofre.
+
+- **GNOME:** quando o `gcr-ssh-agent` pede a passphrase, a janela tem a opção _Automatically unlock this key whenever I'm logged in_ (o texto pode aparecer traduzido). Marcada, a passphrase vai para o chaveiro de login do GNOME Keyring, que é destravado junto com a sua sessão. Para ver ou apagar depois, use o app **Senhas e chaves** (Seahorse).
+- **KDE:** o `ksshaskpass` pode guardar a passphrase no KWallet, que também é destravado no login.
+- **KeePassXC:** a integração com o agente SSH adiciona a chave quando você destrava o banco e a remove quando você trava, com a opção de pedir confirmação a cada uso. Veja [gerenciadores de senha como agente](#gerenciadores-de-senha-como-agente).
+- **O programa `keychain`:** apesar do nome, não guarda nada. É um script, disponível no pacote `keychain` da maioria das distribuições, que reaproveita um único `ssh-agent` entre os terminais, então a passphrase é pedida uma vez por boot. Serve para servidores e para o WSL, onde não tem um desktop com agente.
+
+#### E se a chave não tem passphrase
+
+Aí não tem o que guardar: o agente carrega uma chave sem passphrase sem perguntar nada, e o chaveiro nunca entra em jogo. É justamente o caso em que o arquivo sozinho já é a credencial. O caminho é pôr uma passphrase primeiro e deixar o chaveiro guardá-la:
+
+1. **Confira** se a chave tem passphrase, com o [teste do outro artigo](/pt-br/articles/how-ssh-keys-work#como-saber-se-uma-chave-tem-passphrase).
+2. **Adicione uma.** Numa chave sem passphrase, o `ssh-keygen -p` só pede a nova, duas vezes:
 
 ```bash
-ssh-add -t 1h ~/.ssh/id_ed25519
+ssh-keygen -p -f ~/.ssh/id_ed25519
+```
+
+```
+Key has comment 'user@davidcosta.dev'
+Enter new passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved with the new passphrase.
+```
+
+A chave continua a mesma, só passa a ficar criptografada no disco, então não precisa mudar nada no GitHub nem nos servidores.
+
+3. **Tire do agente a versão sem passphrase**, que continua carregada: `ssh-add -D`. O `gcr-ssh-agent` volta a oferecer as chaves de `~/.ssh` sozinho, agora pedindo a passphrase.
+4. **Use a chave normalmente**, com um `git push` ou um `ssh servidor`. O GNOME mostra a janela pedindo a passphrase: digite e marque _Automatically unlock this key whenever I'm logged in_. Daí em diante, ela vem do chaveiro.
+
+A janela só aparece quando é o próprio agente que precisa da passphrase. Se você rodar `ssh-add` no terminal, a passphrase é pedida ali mesmo, e a opção de guardar não aparece. Mantenha também o `.pub` ao lado da chave: é por ele que o `gcr-ssh-agent` encontra as chaves de `~/.ssh`. No KDE e no KeePassXC, o passo 2 é o mesmo; depois, quem guarda a passphrase é o `ksshaskpass` ou o cofre.
+
+Com a passphrase no chaveiro, o tempo de vida do agente perde força: a chave volta sozinha no próximo uso. O que continua protegendo durante o uso é a confirmação, abaixo.
+
+### Tempo de vida e confirmação
+
+O `AddKeysToAgent 8h` do config de partida resolve o tempo de vida. Na mão, o equivalente é:
+
+```bash
+ssh-add -t 8h ~/.ssh/id_ed25519
 ```
 
 ```
 Identity added: /home/user/.ssh/id_ed25519 (user@davidcosta.dev)
-Lifetime set to 01:00:00
+Lifetime set to 08:00:00
 ```
 
-Para uma chave mais sensível (a de produção, por exemplo), peça confirmação a cada uso:
+Por que oito horas, e não uma: o tempo de vida protege o momento em que você esquece a chave carregada, como o computador que fica ligado à noite. Enquanto você está usando o computador, ele não protege nada, e uma hora só faz você digitar a passphrase várias vezes por dia. Um dia de trabalho é o meio-termo: você digita de manhã, e a chave não passa a noite no agente. Quem protege durante o uso é a confirmação, ou o toque numa chave em hardware.
+
+Para pedir confirmação a cada uso:
 
 ```bash
-ssh-add -c -t 1h ~/.ssh/id_producao
+ssh-add -c -t 8h ~/.ssh/id_ed25519
 ```
 
-Cada assinatura abre uma janela de confirmação, então um processo pedindo assinaturas escondido de você aparece na sua tela. Precisa de um programa `ssh-askpass` instalado, o que os desktops normalmente já têm. No config, o equivalente é `AddKeysToAgent confirm 1h`.
+```
+Identity added: /home/user/.ssh/id_ed25519 (user@davidcosta.dev)
+Lifetime set to 08:00:00
+The user must confirm each use of the key
+```
+
+Cada assinatura abre uma janela perguntando se você permite. Negando, quem pediu recebe isto:
+
+```
+sign_and_send_pubkey: signing failed for ED25519 "user@davidcosta.dev" from agent: agent refused operation
+user@localhost: Permission denied (publickey).
+```
+
+A janela vem de um programa `ssh-askpass`: no GNOME, o próprio `gcr-ssh-agent` traz o dele; no KDE, é o `ksshaskpass`. Sem nenhum, a confirmação não tem como acontecer e todo uso é negado, então em servidores e no WSL sem interface gráfica fique só com o tempo de vida. No config, o equivalente é `AddKeysToAgent confirm 8h`.
 
 Para tirar tudo do agente ao sair de perto do computador:
 
@@ -274,6 +345,20 @@ O Windows mostra a própria janela pedindo o PIN e o toque. Usar o Windows Hello
 
 O WSL é um Linux à parte, com o próprio `~/.ssh`: siga a seção de Linux lá dentro. Não guarde as chaves em `/mnt/c/...`: por padrão, os arquivos do disco do Windows aparecem no WSL com permissões abertas, e o `ssh` se recusa a usá-los.
 
+## Agentes de IA e as suas chaves
+
+Agentes de IA que trabalham no seu terminal, como o Claude Code, o Codex CLI ou o modo agente dos editores, rodam comandos com o seu usuário e herdam as suas variáveis de ambiente. Isso inclui o `SSH_AUTH_SOCK`: se a sua chave está no agente, um `git push`, um `ssh servidor` ou um commit assinado que eles rodem funciona sem pedir nada. É o mesmo risco do agent forwarding: ninguém copia a chave, mas ela é usada sem você ver. E um agente de IA pode ser levado a isso por um texto que ele leu, como um README, uma issue ou uma página com instruções escondidas (_prompt injection_).
+
+Não é motivo para tirar as chaves do agente, e sim para decidir o que um comando que você não digitou pode fazer:
+
+1. **Confirmação a cada uso**, com `AddKeysToAgent confirm 8h` ou a aprovação do 1Password, do Bitwarden ou do KeePassXC. Cada `git push` do agente de IA abre uma janela na sua tela, e você vê o que ia acontecer. Negado, ele recebe o `agent refused operation` mostrado [acima](#tempo-de-vida-e-confirmação).
+2. **Toque numa chave em hardware.** Um processo não aperta um botão físico.
+3. **Chaves separadas e limitadas** para o que o agente de IA faz sozinho. No GitHub, uma _deploy key_ dá acesso a um repositório só, e um token _fine-grained_, usado via HTTPS, pode ser limitado a alguns repositórios e permissões. Se for mal usada, o estrago fica ali.
+4. **A chave de produção fora do alcance**, ou com confirmação, enquanto um agente de IA trabalha na mesma sessão.
+5. **Isolamento.** Num container ou numa VM, o agente de IA só vê o que você monta lá dentro: não monte o socket do seu agente nem a pasta `~/.ssh`.
+
+Uma combinação que funciona bem: a chave pessoal com `confirm 8h` e, se o agente de IA precisa fazer push sozinho, uma deploy key restrita àquele repositório.
+
 ## Gerenciadores de senha como agente
 
 O 1Password, o Bitwarden e o KeePassXC podem funcionar como agente SSH: a chave fica criptografada no cofre, e só fica disponível enquanto o cofre está destravado. O 1Password e o Bitwarden ainda pedem aprovação a cada uso, com Touch ID, Windows Hello ou a senha mestra. Funcionam nos três sistemas.
@@ -302,9 +387,10 @@ ssh-keygen -lf ~/.ssh/authorized_keys
 ## Checklist
 
 - [ ] Chaves Ed25519 (ou `-sk` em hardware); nenhuma DSA, nenhuma RSA abaixo de 3072 bits
-- [ ] Passphrase em toda chave de uso pessoal
+- [ ] Passphrase em toda chave de uso pessoal (confira com `ssh-keygen -y -P ''`)
 - [ ] Uma chave por dispositivo, e uma segunda chave cadastrada nos lugares importantes
-- [ ] Agente com tempo de vida (`AddKeysToAgent 1h` ou `ssh-add -t`)
+- [ ] Agente com tempo de vida (`AddKeysToAgent 8h` ou `ssh-add -t 8h`)
+- [ ] Confirmação a cada uso, ou chave em hardware, se agentes de IA rodam comandos no seu terminal
 - [ ] `IdentitiesOnly yes` e uma `IdentityFile` por servidor
 - [ ] Sem agent forwarding; `ProxyJump` para passar por um bastion
 - [ ] Host keys conferidas na primeira conexão e quando mudam

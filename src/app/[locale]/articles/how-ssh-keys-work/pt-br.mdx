@@ -224,10 +224,19 @@ Repare no `authorized_keys`: ele não tem segredo nenhum, mas quem consegue adic
 
 ### Permissões
 
-O cliente se recusa a usar uma chave privada que outros usuários da máquina conseguem ler:
+O cliente se recusa a usar uma chave privada que outros usuários da máquina conseguem ler. Uma chave copiada de outro lugar costuma chegar assim:
 
 ```bash
-chmod 644 ~/.ssh/id_ed25519
+ls -l ~/.ssh/id_ed25519
+```
+
+```
+-rw-r--r-- 1 user user 464 Oct 15 13:14 /home/user/.ssh/id_ed25519
+```
+
+A primeira coluna é a permissão. Tirando o primeiro caractere (`-` para arquivo, `d` para pasta), são três grupos de três letras: o que o **dono** pode, o que o **grupo** pode e o que **os outros** podem. `r` é ler, `w` é escrever, `x` é executar, e `-` é não poder. Aqui, o dono (`rw-`) lê e escreve, e o grupo e os outros (`r--`) leem. Ao usar a chave:
+
+```bash
 ssh-keygen -y -f ~/.ssh/id_ed25519
 ```
 
@@ -235,13 +244,24 @@ ssh-keygen -y -f ~/.ssh/id_ed25519
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-Permissions 0644 for 'id_ed25519' are too open.
+Permissions 0644 for '/home/user/.ssh/id_ed25519' are too open.
 It is required that your private key files are NOT accessible by others.
 This private key will be ignored.
-Load key "id_ed25519": bad permissions
+Load key "/home/user/.ssh/id_ed25519": bad permissions
 ```
 
-O conserto é `chmod 600`: só o dono lê e escreve. O [artigo de recomendações](/pt-br/articles/keeping-ssh-keys-safe) mostra as permissões de cada arquivo, inclusive o equivalente no Windows.
+O conserto é tirar a leitura do grupo e dos outros:
+
+```bash
+chmod 600 ~/.ssh/id_ed25519
+ls -l ~/.ssh/id_ed25519
+```
+
+```
+-rw------- 1 user user 464 Oct 15 13:14 /home/user/.ssh/id_ed25519
+```
+
+Cada dígito do `600` é um grupo, na ordem dono, grupo e outros, e soma ler (4), escrever (2) e executar (1): 6 é ler e escrever, 0 é nada. O [artigo de recomendações](/pt-br/articles/keeping-ssh-keys-safe#permissões) mostra as permissões da pasta inteira, inclusive o equivalente no Windows.
 
 ## Os tipos de chave
 
@@ -317,7 +337,7 @@ ssh-keygen -y -P 'wrong' -f ~/.ssh/id_ed25519
 ```
 
 ```
-Load key "id_ed25519": incorrect passphrase supplied to decrypt private key
+Load key "/home/user/.ssh/id_ed25519": incorrect passphrase supplied to decrypt private key
 ```
 
 Trocar ou adicionar uma passphrase numa chave existente não muda a chave, então não precisa atualizar nada nos servidores:
@@ -330,6 +350,63 @@ ssh-keygen -p -f ~/.ssh/id_ed25519
 Key has comment 'user@davidcosta.dev'
 Your identification has been saved with the new passphrase.
 ```
+
+### Como saber se uma chave tem passphrase
+
+Tente abrir a chave com uma passphrase vazia (`-P ''`). Numa chave com passphrase, não abre:
+
+```bash
+ssh-keygen -y -P '' -f ~/.ssh/id_ed25519
+```
+
+```
+Load key "/home/user/.ssh/id_ed25519": incorrect passphrase supplied to decrypt private key
+```
+
+Numa chave sem passphrase, abre e imprime a chave pública:
+
+```bash
+ssh-keygen -y -P '' -f ~/.ssh/id_deploy
+```
+
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFh6rzo4Fw99fY4UfOXgz0jUGFBlcRLrAIgliIFjy44J user@davidcosta.dev
+```
+
+Como a passphrase testada é vazia, nada secreto vai para o histórico do shell. Para conferir todas as chaves de `~/.ssh` de uma vez:
+
+```bash
+for key in ~/.ssh/id_*; do
+  [[ $key == *.pub ]] && continue
+  if ssh-keygen -y -P '' -f "$key" >/dev/null 2>&1; then
+    echo "SEM passphrase: $key"
+  else
+    echo "com passphrase: $key"
+  fi
+done
+```
+
+```
+SEM passphrase: /home/user/.ssh/id_deploy
+com passphrase: /home/user/.ssh/id_ed25519
+com passphrase: /home/user/.ssh/id_rsa_old
+```
+
+O loop conta como "com passphrase" qualquer chave que não abriu, inclusive por um motivo diferente, como permissão errada. Se uma chave aparecer assim sem você esperar, rode o `ssh-keygen -y` só nela para ver a mensagem.
+
+Chaves no formato antigo, que começam com `BEGIN RSA PRIVATE KEY`, mostram isso no próprio cabeçalho:
+
+```bash
+head -3 ~/.ssh/id_rsa_old
+```
+
+```
+-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,A1CC956838EA9B9F6FD2AD1AE8FBB1E1
+```
+
+`Proc-Type: 4,ENCRYPTED` é a passphrase. Sem ela, o arquivo começa direto no conteúdo da chave. Para pôr uma passphrase numa chave que não tem, é o mesmo `ssh-keygen -p` de cima.
 
 O que ela **não** protege: um computador comprometido enquanto você usa a chave. Um keylogger captura a passphrase quando você digita, e um malware rodando como o seu usuário pode usar o agente, que veremos a seguir. A passphrase protege o arquivo quando ele sai da sua máquina: num backup, num notebook roubado, num disco descartado. É bastante, mas não é tudo.
 
@@ -348,12 +425,12 @@ echo Agent pid 907797;
 ```
 
 ```bash
-ssh-add -t 1h ~/.ssh/id_ed25519
+ssh-add -t 8h ~/.ssh/id_ed25519
 ```
 
 ```
 Identity added: /home/user/.ssh/id_ed25519 (user@davidcosta.dev)
-Lifetime set to 01:00:00
+Lifetime set to 08:00:00
 ```
 
 ```bash
@@ -364,11 +441,11 @@ ssh-add -l
 256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA user@davidcosta.dev (ED25519)
 ```
 
-O `-t 1h` define um tempo de vida: depois de uma hora, a chave sai do agente e a passphrase volta a ser pedida.
+O `-t 8h` define um tempo de vida: depois de oito horas, a chave sai do agente e a passphrase volta a ser pedida.
 
 Na maioria dos desktops você não inicia o agente na mão: o GNOME, o KDE, o macOS e o Windows já têm um. Descobrir qual está rodando e como configurá-lo faz parte do [artigo de recomendações](/pt-br/articles/keeping-ssh-keys-safe).
 
-O ponto de segurança: pelo protocolo, o agente não entrega a chave para ninguém, só assina. Mas qualquer processo que consiga falar com o socket pode pedir assinaturas, e uma assinatura é tudo o que um servidor pede para deixar entrar.
+O ponto de segurança: pelo protocolo, o agente não entrega a chave para ninguém, só assina. Mas qualquer processo que consiga falar com o socket pode pedir assinaturas, e uma assinatura é tudo o que um servidor pede para deixar entrar. Isso inclui agentes de IA que rodam comandos no seu terminal, e o [artigo de recomendações](/pt-br/articles/keeping-ssh-keys-safe#agentes-de-ia-e-as-suas-chaves) mostra como manter esse uso sob controle.
 
 ## Os problemas de segurança, um por um
 
@@ -479,7 +556,7 @@ Uma chave copiada para o notebook, o desktop e o servidor de CI significa que um
 - Na conexão, o servidor prova a identidade dele com a host key (guardada no `known_hosts`), os dois lados combinam uma chave de sessão (pós-quântica por padrão desde o OpenSSH 10.0) e você prova a sua com uma assinatura.
 - Use Ed25519. RSA serve com 3072 bits ou mais. DSA não existe mais. Evite ECDSA P-521 gerada ou usada no PuTTY antes da versão 0.81.
 - Sem passphrase, o arquivo da chave é a credencial inteira.
-- O agente evita digitar a passphrase toda hora, mas qualquer um que alcance o socket pode assinar por você. Isso inclui o root do servidor quando você usa `ssh -A`.
+- O agente evita digitar a passphrase toda hora, mas qualquer um que alcance o socket pode assinar por você. Isso inclui o root do servidor quando você usa `ssh -A`, e agentes de IA rodando no seu terminal.
 - O aviso de host key alterada é a proteção funcionando: confirme antes de apagar a linha.
 - Diga qual chave usar em cada servidor, restrinja chaves de automação e revise o `authorized_keys`.
 
