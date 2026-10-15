@@ -1,3 +1,5 @@
+import { hostname } from 'node:os';
+
 import mdxfrom from '@next/mdx';
 import rehypePrism from 'rehype-prism-plus';
 import rehypeSlug from 'rehype-slug';
@@ -150,6 +152,10 @@ const withMDX = mdxfrom({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
+  // Lets the phone open the dev server through this machine's hostname. Without
+  // it, Next blocks the dev scripts, React never hydrates and the theme and
+  // language switchers do nothing. Read at startup, so no hostname is committed
+  allowedDevOrigins: [hostname()],
   async redirects() {
     return [
       {
