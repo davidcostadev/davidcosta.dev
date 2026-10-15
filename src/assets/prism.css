@@ -54,8 +54,11 @@ code:not([class*='language-']) {
   color: var(--code-text);
   padding: 0.1em 0.3em;
   border-radius: 0.3em;
-  white-space: nowrap;
   font-size: 0.85em;
+  /* Wraps like text, and breaks a long token (a hash, a path) that doesn't fit
+     the line instead of widening the page. The box stays open at the break, so
+     both halves read as one piece of code. */
+  overflow-wrap: break-word;
 }
 a code:not([class*='language-']) {
   color: inherit;
