@@ -100,6 +100,10 @@ article header + h2[class] {
   opacity: 0.6;
   transition: opacity 120ms ease;
 }
+/* The link's last word and the arrow, kept on the same line (see ArticleLink) */
+.external-link-tail {
+  white-space: nowrap;
+}
 a[data-external]:hover .external-link-icon,
 a[data-external]:focus-visible .external-link-icon {
   opacity: 1;
