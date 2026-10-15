@@ -14,6 +14,8 @@ import { Metadata, Viewport } from 'next';
 
 import { locales } from 'config';
 
+import { GITHUB_URL } from './articles/article-metadata';
+
 import { BackToTop } from 'components/BackToTop';
 import { Footer } from 'components/Footer';
 import { Navbar } from 'components/Navbar';
@@ -87,6 +89,8 @@ export default async function RootLayout({ children, params }: LayoutProps) {
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      {/* The author's GitHub profile, as rel="me" identity link (React hoists it into <head>) */}
+      <link rel="me" href={GITHUB_URL} />
       <body
         className={`antialiased leading-base bg-background-light dark:bg-background-dark text-primary-light dark:text-primary-dark text-lg font-body relative ${plexSans.variable} ${commitMono.variable}`}
         suppressHydrationWarning

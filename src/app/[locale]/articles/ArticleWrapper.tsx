@@ -6,7 +6,7 @@ import { ReadingProgress } from 'components/ReadingProgress';
 import { TableOfContents, type TocItem } from 'components/TableOfContents';
 
 import { ArticleHeader, FrontMatter } from './ArticleHeader';
-import { SITE_URL } from './article-metadata';
+import { GITHUB_URL, SITE_URL } from './article-metadata';
 
 export function ArticleWrapper({
   children,
@@ -33,6 +33,8 @@ export function ArticleWrapper({
       '@type': 'Person',
       name: 'David Costa',
       url: SITE_URL,
+      // Ties the author to the GitHub profile, for search engines
+      sameAs: [GITHUB_URL],
     },
     datePublished: formattedData,
     ...(meta.updated && { dateModified: new Date(meta.updated).toISOString().split('T')[0] }),

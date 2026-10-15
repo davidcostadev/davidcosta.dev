@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { locales } from 'config';
 
 export const SITE_URL = 'https://davidcosta.dev';
+export const GITHUB_URL = 'https://github.com/davidcostadev';
 
 const OPEN_GRAPH_LOCALES: Record<string, string> = {
   en: 'en_US',
