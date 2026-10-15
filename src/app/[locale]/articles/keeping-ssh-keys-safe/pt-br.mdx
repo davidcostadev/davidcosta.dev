@@ -1,0 +1,362 @@
+## Antes de começar
+
+Este artigo é a parte prática de [Chaves SSH por dentro: como funcionam, os tipos e os riscos](/pt-br/articles/how-ssh-keys-work). Lá estão o porquê de cada recomendação: o que a passphrase protege, o risco do agent forwarding, por que oferecer todas as chaves a todo servidor é ruim. Aqui está o que fazer, sistema por sistema.
+
+Os comandos de Linux foram rodados com o OpenSSH 10.2p1 no Ubuntu 26.04, e os outputs são reais, com o nome de usuário trocado por um genérico, `user`. Os de macOS e Windows seguem a documentação da Apple, da Microsoft e dos projetos citados, mas não foram capturados aqui: compare cada passo com o que o seu sistema mostrar.
+
+## O que vale em todo sistema
+
+1. **Use Ed25519**, ou uma chave em hardware (`ed25519-sk`) se você tem uma chave FIDO2.
+2. **Ponha passphrase em toda chave de uso pessoal.** Sem ela, o arquivo é a credencial inteira.
+3. **Use uma chave por dispositivo.** Notebook, desktop e servidor de CI, cada um com a sua.
+4. **Deixe o agente guardar a chave por tempo limitado**, não o dia inteiro.
+5. **Diga qual chave usar em cada servidor** e não faça agent forwarding.
+6. **Confira a host key** na primeira conexão e quando ela mudar.
+7. **Criptografe o disco**: LUKS, FileVault ou BitLocker.
+8. **Revise e revogue**: as chaves cadastradas no GitHub e no GitLab, e o `authorized_keys` dos servidores.
+
+### Um ~/.ssh/config de partida
+
+```text
+Host github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519
+
+Host servidor
+  HostName 203.0.113.10
+  User deploy
+  IdentityFile ~/.ssh/id_ed25519
+
+Host interno
+  HostName 10.0.0.5
+  ProxyJump servidor
+
+Host *
+  IdentitiesOnly yes
+  ForwardAgent no
+  AddKeysToAgent 1h
+```
+
+- `IdentitiesOnly yes` faz o cliente oferecer só a chave configurada para aquele servidor (ou as padrão, se nenhuma for), em vez de todas as que estão no agente.
+- `ForwardAgent no` já é o padrão, mas deixar escrito evita que um bloco anterior ligue sem você perceber.
+- `ProxyJump servidor` faz o `ssh interno` atravessar o `servidor` sem levar o seu agente até ele.
+- `AddKeysToAgent 1h` põe a chave no agente na primeira vez que você digita a passphrase, e tira depois de uma hora.
+
+O `Host *` fica **no fim** porque, no `ssh_config`, vale o primeiro valor encontrado para cada opção: os blocos específicos vêm antes, o genérico completa o que faltou. Para ver o resultado final de um host, use `ssh -G`:
+
+```bash
+ssh -G servidor | grep -E '^(hostname|user|identityfile|identitiesonly|forwardagent|addkeystoagent) '
+```
+
+```
+user deploy
+hostname 203.0.113.10
+identitiesonly yes
+identityfile ~/.ssh/id_ed25519
+addkeystoagent 3600
+forwardagent no
+```
+
+### Uma chave por dispositivo, e nada de backup
+
+Diferente de uma chave de criptografia, perder uma chave SSH não faz você perder dados, só acesso. Por isso, em vez de fazer backup da chave (e espalhar mais cópias dela), cadastre uma **segunda** chave nos lugares importantes: a de outro computador, ou uma chave em hardware guardada numa gaveta. Se o notebook for roubado, você remove só a chave dele de todo lugar e entra com a outra.
+
+Para servidores, garanta um segundo caminho: o console web do provedor, por exemplo. Ficar trancado do lado de fora é o risco real de quem tem uma chave só.
+
+### Disco criptografado
+
+A passphrase protege o arquivo da chave, mas o disco tem mais coisa: o `known_hosts` (onde você conecta), o `config`, o histórico do shell. Com o disco criptografado, um notebook perdido desligado não entrega nada disso. Linux: LUKS, oferecido pelo instalador da maioria das distribuições. macOS: FileVault. Windows: BitLocker, ou a "Criptografia do dispositivo" nas edições Home.
+
+## Linux
+
+### Permissões
+
+```bash
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/id_ed25519 ~/.ssh/config ~/.ssh/authorized_keys
+chmod 644 ~/.ssh/id_ed25519.pub
+```
+
+A chave privada tem que ser legível só por você, senão o cliente a ignora (o aviso de "UNPROTECTED PRIVATE KEY FILE" está no [outro artigo](/pt-br/articles/how-ssh-keys-work#permissões)). No servidor, o `sshd` também recusa um `authorized_keys`, ou uma pasta `~/.ssh`, em que outros usuários possam escrever.
+
+### Qual agente está rodando
+
+Em quase todo desktop Linux já tem um agente. Descubra qual:
+
+```bash
+echo $SSH_AUTH_SOCK
+```
+
+```
+/run/user/1000/gcr/ssh
+```
+
+Esse é o do GNOME (`gcr-ssh-agent`), que usa o `ssh-agent` do OpenSSH por baixo e pede a passphrase numa janela. No KDE, costuma ser o `ssh-agent` com o `ksshaskpass`. Se a variável vier vazia, não tem agente, e você pode iniciar um na sessão do terminal com `eval "$(ssh-agent -s)"`.
+
+### Tempo de vida e confirmação
+
+O `AddKeysToAgent 1h` do config de partida resolve o tempo de vida. Na mão, o equivalente é:
+
+```bash
+ssh-add -t 1h ~/.ssh/id_ed25519
+```
+
+```
+Identity added: /home/user/.ssh/id_ed25519 (user@davidcosta.dev)
+Lifetime set to 01:00:00
+```
+
+Para uma chave mais sensível (a de produção, por exemplo), peça confirmação a cada uso:
+
+```bash
+ssh-add -c -t 1h ~/.ssh/id_producao
+```
+
+Cada assinatura abre uma janela de confirmação, então um processo pedindo assinaturas escondido de você aparece na sua tela. Precisa de um programa `ssh-askpass` instalado, o que os desktops normalmente já têm. No config, o equivalente é `AddKeysToAgent confirm 1h`.
+
+Para tirar tudo do agente ao sair de perto do computador:
+
+```bash
+ssh-add -D
+```
+
+### Chaves em hardware (FIDO2)
+
+Com uma chave FIDO2, como um YubiKey (série 5) ou um Nitrokey 3, a chave privada é gerada dentro do dispositivo e não sai de lá. O OpenSSH das distribuições principais já vem com suporte:
+
+```bash
+ssh-keygen -t ed25519-sk -O verify-required -C "user@davidcosta.dev"
+```
+
+- O dispositivo pede um **toque** a cada uso, por padrão.
+- O `-O verify-required` pede também o **PIN** do dispositivo a cada uso, então um dispositivo roubado não serve sozinho.
+- O arquivo gerado em `~/.ssh/id_ed25519_sk` não é a chave, só uma referência a ela: sem o dispositivo, ele não serve para nada.
+
+Se você alterna entre computadores, o `-O resident` guarda essa referência no próprio dispositivo, e o `ssh-keygen -K` a recupera em qualquer máquina. O manual avisa da troca: com tudo no dispositivo, quem o rouba fica mais perto de usá-lo, e por isso chaves residentes normalmente exigem um PIN configurado.
+
+Não tenho um dispositivo FIDO2 neste laboratório, então os outputs desta seção não foram capturados. Algumas chaves mais antigas não suportam Ed25519: nesse caso, use `-t ecdsa-sk`.
+
+### Se você também administra o servidor
+
+Quando todas as suas chaves estiverem funcionando, desligue a entrada por senha no servidor. Crie um arquivo em `/etc/ssh/sshd_config.d/`:
+
+```text
+# /etc/ssh/sshd_config.d/10-hardening.conf
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+```
+
+O nome começa com `10-` de propósito. No `sshd_config` também vale o primeiro valor encontrado, os arquivos dessa pasta são lidos em ordem alfabética, e imagens de nuvem costumam trazer um `50-cloud-init.conf` com `PasswordAuthentication yes`. Confira o valor efetivo com `sshd -T`. Num laboratório com os dois arquivos:
+
+```bash
+sudo sshd -T | grep -E '^(passwordauthentication|kbdinteractiveauthentication|permitrootlogin)'
+```
+
+```
+permitrootlogin prohibit-password
+passwordauthentication no
+kbdinteractiveauthentication no
+```
+
+`prohibit-password` é o padrão: o root só entra com chave. Se você nunca entra como root, troque por `PermitRootLogin no`.
+
+Valide a sintaxe com `sudo sshd -t` e reinicie o serviço (`sudo systemctl restart ssh` no Debian e no Ubuntu, `sshd` no Fedora e no Arch). **Mantenha a sessão atual aberta** e teste uma conexão nova em outro terminal antes de sair: se algo deu errado, é por essa sessão que você conserta.
+
+## macOS
+
+### A passphrase no Keychain
+
+O macOS já traz o OpenSSH e um agente iniciado pelo sistema. A integração própria da Apple guarda a passphrase no Keychain:
+
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+```
+
+E no `~/.ssh/config`:
+
+```text
+Host *
+  IgnoreUnknown UseKeychain
+  UseKeychain yes
+  AddKeysToAgent yes
+```
+
+Com isso, a passphrase fica no Keychain, que é destravado quando você faz login, e a chave volta ao agente sozinha depois de reiniciar. É cômodo, mas troca a passphrase pela senha da sua conta do macOS: quem estiver com a sua sessão aberta usa a chave. Bloqueie a tela ao sair de perto.
+
+O `IgnoreUnknown UseKeychain` é para o caso de você usar também o OpenSSH do Homebrew: o `UseKeychain` só existe no OpenSSH da Apple, e o do Homebrew recusa o config inteiro com "Bad configuration option" sem essa linha.
+
+### Chaves no Secure Enclave
+
+Macs com chip Apple ou com o chip T2 têm o Secure Enclave, um chip separado de onde chaves não podem ser extraídas. O [Secretive](https://github.com/maxgoedjen/secretive) é um app de código aberto que cria chaves SSH lá dentro e funciona como agente, com Touch ID por uso, se você quiser. É o equivalente a ter uma chave em hardware sem comprar um dispositivo, com uma diferença: a chave fica presa àquele Mac, então ela é a chave daquele dispositivo, e você precisa de outra para os demais.
+
+O Secure Enclave só gera chaves ECDSA P-256, não Ed25519. Tudo bem: a fragilidade do ECDSA está no número aleatório de cada assinatura, e quem gera esse número é o próprio chip.
+
+### Chaves FIDO2 no macOS
+
+O OpenSSH que vem com o macOS é compilado sem suporte a chaves FIDO, e o `ssh-keygen -t ed25519-sk` falha. O caminho mais comum é instalar o OpenSSH do Homebrew (`brew install openssh`), que inclui esse suporte, e conferir com `which ssh` e `ssh -V` qual dos dois está sendo usado. O Secretive costuma ser a opção mais simples no Mac.
+
+### FileVault
+
+Em **Ajustes do Sistema > Privacidade e Segurança > FileVault**. O assistente de configuração do Mac oferece ligá-lo, mas vale conferir.
+
+## Windows
+
+### O OpenSSH já vem no sistema
+
+O Windows 10 (desde a versão 1809) e o Windows 11 já trazem o cliente OpenSSH. No PowerShell:
+
+```powershell
+ssh -V
+```
+
+As chaves ficam em `C:\Users\VOCÊ\.ssh`, ou `$env:USERPROFILE\.ssh`. O `ssh-keygen` é o mesmo, e o padrão também é Ed25519:
+
+```powershell
+ssh-keygen -t ed25519 -C "user@davidcosta.dev"
+```
+
+### Permissões
+
+No Windows, as permissões são ACLs, e o OpenSSH do Windows também recusa uma chave privada que outros usuários conseguem ler. Para deixar o arquivo acessível só para você:
+
+```powershell
+icacls $env:USERPROFILE\.ssh\id_ed25519 /inheritance:r
+icacls $env:USERPROFILE\.ssh\id_ed25519 /grant:r "$($env:USERNAME):F"
+```
+
+O primeiro comando remove as permissões herdadas da pasta; o segundo dá controle total só ao seu usuário.
+
+### O serviço ssh-agent
+
+O agente do Windows é um serviço, que vem desativado. Num PowerShell **como administrador**:
+
+```powershell
+Get-Service ssh-agent | Set-Service -StartupType Automatic
+Start-Service ssh-agent
+```
+
+E, como o seu usuário:
+
+```powershell
+ssh-add $env:USERPROFILE\.ssh\id_ed25519
+```
+
+Aqui o Windows é bem diferente do Linux e do macOS: o agente **guarda a chave de forma persistente**, associada à sua conta do Windows, e ela continua lá depois de reiniciar. A [documentação da Microsoft](https://learn.microsoft.com/pt-br/windows-server/administration/openssh/openssh_keymanagement) chega a sugerir apagar o arquivo da chave depois de adicioná-la. Na prática, você digita a passphrase uma vez, e daí em diante a proteção da chave é a proteção da sua conta do Windows. Então:
+
+- Proteja a conta: Windows Hello ou uma senha forte, e tela bloqueada ao sair de perto.
+- Use BitLocker.
+- Remova chaves que não usa mais com `ssh-add -D`, ou `ssh-add -d` com o arquivo.
+- Para uma chave mais sensível, prefira uma chave em hardware ou um gerenciador de senhas como agente (abaixo).
+
+### Git for Windows
+
+O Git for Windows traz o próprio `ssh.exe`, que não conversa com o serviço `ssh-agent` do Windows. O sintoma é o Git pedir a passphrase toda vez, mesmo com a chave no agente. Aponte o Git para o OpenSSH do sistema:
+
+```powershell
+git config --global core.sshCommand "C:/Windows/System32/OpenSSH/ssh.exe"
+```
+
+### PuTTY
+
+Se você usa o PuTTY, ou programas que o embutem (FileZilla, WinSCP, TortoiseGit), atualize: as versões 0.68 a 0.80 vazavam chaves ECDSA P-521 ([CVE-2024-31497](https://www.openwall.com/lists/oss-security/2024/04/15/6)). Se você usou uma chave P-521 nessas versões, troque a chave, porque atualizar não desfaz as assinaturas já feitas. O PuTTY usa o formato `.ppk` e o próprio agente, o Pageant. O PuTTYgen converte chaves entre os formatos do PuTTY e do OpenSSH.
+
+### Chaves FIDO2 no Windows
+
+O OpenSSH do Windows usa a API WebAuthn do próprio sistema, então chaves físicas FIDO2 funcionam sem instalar nada:
+
+```powershell
+ssh-keygen -t ed25519-sk -O verify-required -C "user@davidcosta.dev"
+```
+
+O Windows mostra a própria janela pedindo o PIN e o toque. Usar o Windows Hello do computador como autenticador, em vez de um dispositivo físico, é instável: há [relatos](https://github.com/PowerShell/Win32-OpenSSH/issues/2408) de a janela trocar o Windows Hello por "celular ou chave USB" depois de atualizações.
+
+### WSL
+
+O WSL é um Linux à parte, com o próprio `~/.ssh`: siga a seção de Linux lá dentro. Não guarde as chaves em `/mnt/c/...`: por padrão, os arquivos do disco do Windows aparecem no WSL com permissões abertas, e o `ssh` se recusa a usá-los.
+
+## Gerenciadores de senha como agente
+
+O 1Password, o Bitwarden e o KeePassXC podem funcionar como agente SSH: a chave fica criptografada no cofre, e só fica disponível enquanto o cofre está destravado. O 1Password e o Bitwarden ainda pedem aprovação a cada uso, com Touch ID, Windows Hello ou a senha mestra. Funcionam nos três sistemas.
+
+A troca: o cofre sincroniza entre os seus dispositivos, então a mesma chave passa a existir em todos eles, ao contrário do "uma chave por dispositivo". Para a maioria das pessoas, ter a chave protegida pelo cofre e com aprovação por uso compensa. Se você prefere manter uma chave por dispositivo, crie uma chave para cada um dentro do cofre.
+
+## Se uma chave vazar
+
+1. **Remova a chave pública de todo lugar** em que ela entra: GitHub, GitLab e o `authorized_keys` de cada servidor. Para achar a linha, liste os fingerprints do arquivo e compare com o da chave vazada:
+
+```bash
+ssh-keygen -lf ~/.ssh/authorized_keys
+```
+
+```
+256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA user@davidcosta.dev (ED25519)
+256 SHA256:cycriPjeX1MyKaDUPvNH4ySmfg8RVZe+EGnV/EImFnQ user@davidcosta.dev (ED25519)
+3072 SHA256:ypI93OhP6BnAPzWA7Ut6fzAxERVrO8R1Ot19RxPG204 user@davidcosta.dev (RSA)
+256 SHA256:uhpYBP/1S7pAB7Agqm4u9GbKMzEld7i7qIWH5Su8PH0 user@davidcosta.dev (ECDSA)
+```
+
+2. **Gere uma chave nova** e cadastre no lugar da antiga.
+3. **Procure se ela foi usada.** Nos servidores, cada entrada fica no log com o fingerprint da chave (`journalctl -u ssh | grep 'Accepted publickey'`, ou `-u sshd` fora do Debian e do Ubuntu). No GitHub, o log de segurança da conta mostra as ações recentes.
+4. **Revise o `authorized_keys`** dos servidores em que ela entrava. Quem entrou com uma chave roubada pode ter deixado outra chave lá, para voltar depois.
+
+## Checklist
+
+- [ ] Chaves Ed25519 (ou `-sk` em hardware); nenhuma DSA, nenhuma RSA abaixo de 3072 bits
+- [ ] Passphrase em toda chave de uso pessoal
+- [ ] Uma chave por dispositivo, e uma segunda chave cadastrada nos lugares importantes
+- [ ] Agente com tempo de vida (`AddKeysToAgent 1h` ou `ssh-add -t`)
+- [ ] `IdentitiesOnly yes` e uma `IdentityFile` por servidor
+- [ ] Sem agent forwarding; `ProxyJump` para passar por um bastion
+- [ ] Host keys conferidas na primeira conexão e quando mudam
+- [ ] Permissões corretas (`chmod 600`, ou `icacls` no Windows)
+- [ ] Disco criptografado (LUKS, FileVault ou BitLocker)
+- [ ] Chaves revisadas no GitHub, no GitLab e no `authorized_keys` dos servidores
+- [ ] Entrada por senha desligada nos servidores que você administra
+- [ ] PuTTY e derivados na versão 0.81 ou mais nova
+- [ ] Um plano para chave vazada: remover, trocar, procurar nos logs
+
+## Fontes
+
+- [Manual do ssh_config](https://man.openbsd.org/ssh_config.5)
+- [Manual do ssh-add](https://man.openbsd.org/ssh-add.1)
+- [Manual do ssh-keygen: chaves FIDO](https://man.openbsd.org/ssh-keygen.1#FIDO_AUTHENTICATOR)
+- [Manual do sshd_config](https://man.openbsd.org/sshd_config.5)
+- [Microsoft: autenticação por chave no OpenSSH para Windows](https://learn.microsoft.com/pt-br/windows-server/administration/openssh/openssh_keymanagement)
+- [GitHub: gerar uma chave SSH e adicioná-la ao agente](https://docs.github.com/pt/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+- [Secretive](https://github.com/maxgoedjen/secretive)
+- [CVE-2024-31497: chaves P-521 no PuTTY (oss-security)](https://www.openwall.com/lists/oss-security/2024/04/15/6)
+
+import { ArticleWrapper } from '../ArticleWrapper';
+
+export const metadata = {
+  title: 'Como manter suas chaves SSH seguras no Linux, macOS e Windows',
+  date: '2026-10-15T12:00:00.000Z',
+  lang: 'pt-br',
+  draft: true,
+  tags: ['linux', 'security', 'ssh'],
+  description:
+    'Recomendações práticas para guardar chaves SSH: passphrase, agente com tempo limitado, config por servidor, chaves em hardware, Keychain no macOS, o ssh-agent do Windows e o que fazer quando uma chave vaza.',
+  keywords: [
+    'ssh',
+    'chave ssh',
+    'segurança',
+    'ssh-agent',
+    'yubikey',
+    'fido2',
+    'macos',
+    'windows',
+    'linux',
+  ],
+  authors: {
+    name: 'David Costa',
+  },
+  alternates: {
+    canonical: '/pt-br/articles/keeping-ssh-keys-safe',
+  },
+};
+
+export default ({ children }) => (
+  <ArticleWrapper meta={metadata} toc={toc} readingTime={readingTime}>
+    {children}
+  </ArticleWrapper>
+);

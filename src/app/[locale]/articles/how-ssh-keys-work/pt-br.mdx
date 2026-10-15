@@ -1,0 +1,529 @@
+## Antes de começar
+
+Se você faz `git push` ou `ssh servidor` todo dia, já usa chaves SSH. Mas é comum usar sem saber o que tem dentro de `~/.ssh`, por que um arquivo precisa de `chmod 600`, o que é aquele aviso gigante de "REMOTE HOST IDENTIFICATION HAS CHANGED" ou se a sua chave RSA de 2015 ainda serve. Este artigo explica como as chaves funcionam, as diferenças entre os tipos e os problemas de segurança que vêm junto.
+
+As recomendações práticas para guardar as chaves no Linux, no macOS e no Windows ficaram num artigo separado: [Como manter suas chaves SSH seguras no Linux, macOS e Windows](/pt-br/articles/keeping-ssh-keys-safe).
+
+Todos os outputs abaixo foram capturados com o OpenSSH 10.2p1 no Ubuntu 26.04, num laboratório: chaves geradas só para este artigo (e já descartadas) e um servidor `sshd` rodando localmente na porta 2222. Os caminhos foram trocados pelos usuais, em `~/.ssh`, e o nome de usuário e o identificador da máquina nos sockets do agente, por genéricos (`user`, `xxxxxxxxxx`).
+
+## Senha ou chave: qual é a diferença
+
+Com **senha**, o segredo viaja até o servidor. Ele vai dentro do túnel criptografado, mas chega do outro lado: o servidor recebe a sua senha, compara com o que tem guardado e decide. Isso tem três consequências:
+
+- Se você conectar num servidor falso, ou num servidor comprometido, ele recebe a sua senha.
+- Se você usa a mesma senha em outro lugar, quem a capturou entra lá também.
+- Qualquer um na internet pode tentar adivinhar. Um servidor SSH exposto recebe tentativas o dia inteiro.
+
+Com **chave**, o segredo nunca sai do seu computador. Funciona com criptografia assimétrica: um par de chaves em que uma **assina** e a outra **confere**.
+
+- A **chave privada** fica com você e assina.
+- A **chave pública** vai para o servidor e só confere assinaturas. Ela não serve para assinar, então pode ficar exposta sem problema.
+
+Na hora de entrar, o servidor não pede um segredo: ele pede uma assinatura sobre os dados _daquela_ conexão. Você assina com a chave privada, e o servidor confere com a pública. Um servidor falso que receba essa assinatura não consegue reusá-la em lugar nenhum, porque ela só vale para aquela sessão. E não tem o que adivinhar: uma chave Ed25519 tem 256 bits.
+
+## O par de chaves
+
+### Gerando
+
+```bash
+ssh-keygen -t ed25519 -C "user@davidcosta.dev"
+```
+
+Ele pergunta onde salvar (o padrão é `~/.ssh/id_ed25519`), pede uma passphrase duas vezes (falo dela mais abaixo) e mostra:
+
+```
+Generating public/private ed25519 key pair.
+Your identification has been saved in /home/user/.ssh/id_ed25519
+Your public key has been saved in /home/user/.ssh/id_ed25519.pub
+The key fingerprint is:
+SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA user@davidcosta.dev
+The key's randomart image is:
++--[ED25519 256]--+
+|     +o=+*=E.... |
+|     .O . o.    .|
+|    o+ + o      o|
+|   . .o .   . ...|
+|    .  .S. . . o.|
+|   . o o...   o..|
+|  ..+.. .    ... |
+|   oo+o. .     ..|
+|    o*O+o..   .. |
++----[SHA256]-----+
+```
+
+- O **fingerprint** (`SHA256:j2Hj...`) é um resumo da chave pública. É ele que você compara quando precisa conferir se duas chaves são a mesma, em vez de comparar a chave inteira.
+- O **randomart** é o mesmo fingerprint em forma de desenho, pensado para olhos humanos. Na prática, quase ninguém usa.
+- O `-C` é só um **comentário**, um rótulo. Se você não passar, o `ssh-keygen` usa `usuário@hostname`.
+
+Desde o OpenSSH 9.5, Ed25519 é o tipo padrão, então o `-t ed25519` é opcional numa versão recente. Deixo explícito porque ainda tem muita versão antiga por aí, que gera RSA.
+
+### A chave pública
+
+O `.pub` é uma linha de texto:
+
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
+
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG9C7aiUs2CH+CJXLHOx47lH30/h/S6FQvMOy8Qh1bsl user@davidcosta.dev
+```
+
+São três partes separadas por espaço: o **tipo** (`ssh-ed25519`), a **chave** em base64 e o **comentário**. É essa linha que você cola no GitHub, ou que vai para o `authorized_keys` de um servidor.
+
+Ela é pública de verdade: o GitHub, por exemplo, mostra as chaves de qualquer usuário em `https://github.com/USUÁRIO.keys`. O único cuidado é o comentário. Ele vai junto para todo lugar, e um `nome@notebook-do-trabalho` diz mais do que você talvez queira.
+
+### A chave privada
+
+O arquivo sem extensão é a chave privada:
+
+```bash
+cat ~/.ssh/id_ed25519
+```
+
+```
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAACmFlczI1Ni1jdHIAAAAGYmNyeXB0AAAAGAAAABCW+OGsqr
+Swf2zSsEleiYq4AAAAGAAAAAEAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIG9C7aiUs2CH+CJX
+...
+-----END OPENSSH PRIVATE KEY-----
+```
+
+Parece embaralhado, mas é só base64. Decodificando o começo dá para ver o que tem dentro:
+
+```bash
+sed '1d;$d' ~/.ssh/id_ed25519 | base64 -d | head -c 60 | od -c | head -3
+```
+
+```
+0000000   o   p   e   n   s   s   h   -   k   e   y   -   v   1  \0  \0
+0000020  \0  \0  \n   a   e   s   2   5   6   -   c   t   r  \0  \0  \0
+0000040 006   b   c   r   y   p   t  \0  \0  \0 030  \0  \0  \0 020 226
+```
+
+`aes256-ctr` e `bcrypt`: a chave está criptografada com AES-256, e a chave do AES vem da sua passphrase, passada pelo bcrypt. Agora o mesmo comando numa chave gerada **sem** passphrase:
+
+```
+0000000   o   p   e   n   s   s   h   -   k   e   y   -   v   1  \0  \0
+0000020  \0  \0 004   n   o   n   e  \0  \0  \0 004   n   o   n   e  \0
+0000040  \0  \0  \0  \0  \0  \0 001  \0  \0  \0   3  \0  \0  \0  \v   s
+```
+
+`none` e `none`. Nesse caso, o arquivo inteiro é a credencial:
+
+```
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACB9lqVXBOaxg7JQFnBg4CpsVso+9sjLHtCYI5vhdy4ZGAAAAJg5HLaaORy2
+mgAAAAtzc2gtZWQyNTUxOQAAACB9lqVXBOaxg7JQFnBg4CpsVso+9sjLHtCYI5vhdy4ZGA
+AAAEDfYwZ3JMXXU6QXIwoDAezMIMb09YFsTip27TrGu+LCKX2WpVcE5rGDslAWcGDgKmxW
+yj72yMse0Jgjm+F3LhkYAAAAE3VzZXJAZGF2aWRjb3N0YS5kZXYBAg==
+-----END OPENSSH PRIVATE KEY-----
+```
+
+Essas seis linhas bastam para entrar em todo servidor que confia nessa chave. Quem copiar o arquivo, de um backup, de um notebook perdido ou de um repositório público, entra como você, sem precisar de mais nada.
+
+### Recuperando a chave pública
+
+A chave pública pode ser recalculada a partir da privada, então perder o `.pub` não é problema:
+
+```bash
+ssh-keygen -y -f ~/.ssh/id_ed25519
+```
+
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG9C7aiUs2CH+CJXLHOx47lH30/h/S6FQvMOy8Qh1bsl user@davidcosta.dev
+```
+
+O caminho contrário não existe: da pública não se chega na privada. É isso que deixa a pública ser pública.
+
+## O que acontece quando você conecta
+
+Uma conexão SSH tem três etapas, e cada uma usa chaves diferentes.
+
+### 1. O servidor prova quem ele é
+
+Antes de você provar qualquer coisa, o servidor prova a identidade dele. Todo servidor SSH tem o próprio par de chaves, a **host key**. Na primeira conexão, o seu cliente ainda não conhece essa chave e pergunta:
+
+```bash
+ssh -p 2222 localhost
+```
+
+```
+The authenticity of host '[localhost]:2222 ([127.0.0.1]:2222)' can't be established.
+ED25519 key fingerprint is: SHA256:OgwSH3pkR3bru6Mi/wk+CxJeaxYXe4YpJxKzzE9n6CM
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '[localhost]:2222' (ED25519) to the list of known hosts.
+```
+
+Respondendo `yes`, a chave vai para o `~/.ssh/known_hosts`:
+
+```text
+[localhost]:2222 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGd5ozLOqnguVBMd2Y/Y4OotPrw+sgqCghiqlE1PcfQ9
+```
+
+Daí em diante, o cliente confere a chave a cada conexão. Esse modelo se chama **TOFU**, _trust on first use_: a primeira conexão é a que importa, porque é ali que você decide em quem confiar. Quem digita `yes` sem olhar está confiando em quem quer que tenha respondido.
+
+Em vez de `yes`, dá para colar o fingerprint esperado, e o cliente compara para você. Serviços grandes publicam os deles. O do GitHub, para chaves Ed25519, é `SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU`, segundo a [documentação oficial](https://docs.github.com/pt/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints).
+
+### 2. Os dois lados combinam uma chave de sessão
+
+Com o servidor identificado, os dois lados combinam uma chave temporária para criptografar o resto da conexão. É a **troca de chaves** (_key exchange_). O `-v` mostra qual algoritmo foi usado:
+
+```bash
+ssh -v -p 2222 localhost true 2>&1 | grep 'kex: algorithm'
+```
+
+```
+debug1: kex: algorithm: mlkem768x25519-sha256
+```
+
+`mlkem768x25519-sha256` combina o X25519, clássico, com o ML-KEM, um algoritmo pós-quântico padronizado pelo NIST. É o padrão desde o OpenSSH 10.0. Volto a ele na parte sobre computação quântica.
+
+### 3. Você prova quem você é
+
+Agora sim entra a sua chave. As linhas relevantes do `-v`:
+
+```
+debug1: Authentications that can continue: publickey
+debug1: Will attempt key: nopass ED25519 SHA256:cycriPjeX1MyKaDUPvNH4ySmfg8RVZe+EGnV/EImFnQ explicit
+debug1: Offering public key: nopass ED25519 SHA256:cycriPjeX1MyKaDUPvNH4ySmfg8RVZe+EGnV/EImFnQ explicit
+debug1: Server accepts key: nopass ED25519 SHA256:cycriPjeX1MyKaDUPvNH4ySmfg8RVZe+EGnV/EImFnQ explicit
+Authenticated to localhost ([127.0.0.1]:2222) using "publickey".
+```
+
+1. O cliente **oferece** a chave pública: "você aceitaria esta?".
+2. O servidor procura no `~/.ssh/authorized_keys` do usuário e responde que **aceita**.
+3. Só então o cliente assina os dados da sessão com a chave privada, e o servidor confere a assinatura.
+
+No servidor, o log registra qual chave entrou, pelo fingerprint:
+
+```
+Accepted publickey for user from 127.0.0.1 port 50226 ssh2: ED25519 SHA256:cycriPjeX1MyKaDUPvNH4ySmfg8RVZe+EGnV/EImFnQ
+```
+
+Guarde essa linha: quando você precisar descobrir qual chave foi usada para entrar num servidor, é ela que responde. Uma chave que não está no `authorized_keys` termina assim:
+
+```
+user@localhost: Permission denied (publickey).
+```
+
+## Os arquivos de ~/.ssh
+
+| Arquivo           | O que é                                                              | Segredo?                                   |
+| ----------------- | -------------------------------------------------------------------- | ------------------------------------------ |
+| `id_ed25519`      | Sua chave privada                                                    | **Sim**                                    |
+| `id_ed25519.pub`  | Sua chave pública                                                    | Não                                        |
+| `authorized_keys` | Chaves públicas que podem entrar **nesta** máquina como você         | Não, mas quem consegue escrever nele entra |
+| `known_hosts`     | Host keys dos servidores em que você já conectou                     | Não, mas revela onde você conecta          |
+| `config`          | Suas configurações do cliente: apelidos, chaves por servidor, opções | Não                                        |
+| `agent/`          | Sockets do ssh-agent, desde o OpenSSH 10.1 (antes ficavam em `/tmp`) | Dá acesso ao agente enquanto existe        |
+
+Repare no `authorized_keys`: ele não tem segredo nenhum, mas quem consegue adicionar uma linha nele ganha acesso permanente à sua conta. Por isso ele é um dos primeiros lugares que um invasor procura, e um dos que você deve revisar.
+
+### Permissões
+
+O cliente se recusa a usar uma chave privada que outros usuários da máquina conseguem ler:
+
+```bash
+chmod 644 ~/.ssh/id_ed25519
+ssh-keygen -y -f ~/.ssh/id_ed25519
+```
+
+```
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0644 for 'id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "id_ed25519": bad permissions
+```
+
+O conserto é `chmod 600`: só o dono lê e escreve. O [artigo de recomendações](/pt-br/articles/keeping-ssh-keys-safe) mostra as permissões de cada arquivo, inclusive o equivalente no Windows.
+
+## Os tipos de chave
+
+| Tipo                        | Na linha do `.pub`           | Situação                                       |
+| --------------------------- | ---------------------------- | ---------------------------------------------- |
+| Ed25519                     | `ssh-ed25519`                | Recomendado, padrão desde o OpenSSH 9.5        |
+| RSA                         | `ssh-rsa`                    | Ainda funciona com 3072 bits ou mais           |
+| ECDSA                       | `ecdsa-sha2-nistp256`        | Funciona, mas tem uma fragilidade (abaixo)     |
+| DSA                         | `ssh-dss`                    | Removido no OpenSSH 10.0                       |
+| Ed25519 / ECDSA em hardware | `sk-ssh-ed25519@openssh.com` | A melhor proteção, se você tem uma chave FIDO2 |
+
+Lado a lado, as chaves públicas geradas para este artigo:
+
+```
+573 id_rsa.pub
+181 id_ecdsa.pub
+101 id_ed25519.pub
+```
+
+### Ed25519
+
+É a escolha padrão por bons motivos: chaves pequenas, assinaturas rápidas e um projeto que evita os erros de implementação mais comuns. O principal deles está na seção do ECDSA. Não tem tamanho para escolher: é sempre 256 bits.
+
+### RSA, e o nome confuso "ssh-rsa"
+
+RSA é o tipo mais antigo ainda em uso e continua seguro com tamanho suficiente. O padrão do `ssh-keygen` é 3072 bits:
+
+```
+3072 SHA256:ypI93OhP6BnAPzWA7Ut6fzAxERVrO8R1Ot19RxPG204 user@davidcosta.dev (RSA)
+```
+
+Chaves com menos de 1024 bits são recusadas (`RequiredRSASize`). Se a sua chave RSA tem 2048 bits ou menos, é um bom motivo para trocar por Ed25519.
+
+O nome confunde. Em 2021, o OpenSSH 8.8 desativou o algoritmo de assinatura chamado `ssh-rsa`, que usa SHA-1, e muita gente entendeu que as chaves RSA tinham morrido. Não morreram: a mesma chave, que continua com `ssh-rsa` escrito no `.pub`, passou a assinar com `rsa-sha2-256` ou `rsa-sha2-512`. O que acabou foi a assinatura com SHA-1, não o tipo de chave. Se uma chave RSA antiga parou de funcionar com um servidor, o problema costuma ser um servidor muito velho, que só conhece o SHA-1.
+
+### ECDSA e o número aleatório
+
+Cada assinatura ECDSA usa um número secreto, gerado na hora, que nunca pode se repetir nem ser previsível. Se ele se repete, ou se parte dele é previsível, quem junta algumas assinaturas consegue calcular a chave privada.
+
+Não é teoria. Em 2010, a Sony usava sempre o mesmo número para assinar os jogos do PlayStation 3, e a chave privada foi recuperada. Em 2024, o [CVE-2024-31497](https://www.openwall.com/lists/oss-security/2024/04/15/6) mostrou que o PuTTY gerava esse número com os 9 primeiros bits sempre zerados nas chaves ECDSA P-521: com cerca de 60 assinaturas, dava para recuperar a chave. Afetava o PuTTY de 0.68 a 0.80 e programas que o embutem, como FileZilla, WinSCP e TortoiseGit. Quem usou uma chave P-521 nessas versões precisa trocá-la, porque atualizar o programa não desfaz as assinaturas que já foram feitas.
+
+O Ed25519 deriva esse número da própria chave e da mensagem, de forma determinística, então um gerador de números aleatórios ruim na hora de assinar não vaza nada. Esse é um dos motivos para preferi-lo.
+
+### DSA: já era
+
+```bash
+ssh-keygen -t dsa
+```
+
+```
+unknown key type dsa
+```
+
+O DSA era limitado a 1024 bits e foi removido de vez no OpenSSH 10.0. Se você ainda tem um `id_dsa`, ele não funciona mais num cliente atualizado.
+
+### Chaves em hardware: ed25519-sk e ecdsa-sk
+
+O sufixo `-sk` (_security key_) significa que a chave privada fica dentro de uma chave FIDO2, como um YubiKey, de onde ela não sai. O arquivo em `~/.ssh` vira só uma referência à chave do dispositivo: sem o dispositivo plugado, e sem um toque nele, o arquivo não serve para nada. Nem um malware rodando no seu computador consegue copiar a chave, porque não há chave no disco para roubar, e cada uso pede um toque físico no dispositivo. O [artigo de recomendações](/pt-br/articles/keeping-ssh-keys-safe) mostra como gerar uma.
+
+### E a computação quântica?
+
+Um computador quântico grande o bastante quebraria RSA, ECDSA e Ed25519. No SSH, isso gera dois riscos diferentes:
+
+- **Gravar agora, decifrar depois.** Alguém grava as suas conexões hoje e decifra quando tiver o computador quântico. Esse risco depende da **troca de chaves**, e é por isso que ela já é pós-quântica por padrão: o `mlkem768x25519-sha256` do output acima.
+- **Se passar por você.** Com um computador quântico, alguém poderia calcular a sua chave privada a partir da pública, que, lembre, é pública. Mas isso só serve enquanto o computador quântico existir e a sua chave ainda estiver em uso. Não dá para fazer hoje e aproveitar depois, então as chaves de usuário podem esperar por assinaturas pós-quânticas sem pressa.
+
+## Passphrase: o que ela protege e o que não protege
+
+A passphrase criptografa a chave privada no disco, como você viu no `aes256-ctr` e `bcrypt`. O bcrypt é lento de propósito: cada tentativa de adivinhar custa caro (o `-a` controla quantas rodadas, e o padrão é 16). Sem a passphrase, o arquivo roubado não serve:
+
+```bash
+ssh-keygen -y -P 'wrong' -f ~/.ssh/id_ed25519
+```
+
+```
+Load key "id_ed25519": incorrect passphrase supplied to decrypt private key
+```
+
+Trocar ou adicionar uma passphrase numa chave existente não muda a chave, então não precisa atualizar nada nos servidores:
+
+```bash
+ssh-keygen -p -f ~/.ssh/id_ed25519
+```
+
+```
+Key has comment 'user@davidcosta.dev'
+Your identification has been saved with the new passphrase.
+```
+
+O que ela **não** protege: um computador comprometido enquanto você usa a chave. Um keylogger captura a passphrase quando você digita, e um malware rodando como o seu usuário pode usar o agente, que veremos a seguir. A passphrase protege o arquivo quando ele sai da sua máquina: num backup, num notebook roubado, num disco descartado. É bastante, mas não é tudo.
+
+## O ssh-agent
+
+Digitar a passphrase a cada `git push` cansa. O **ssh-agent** resolve isso: é um programa que guarda as chaves já descriptografadas, em memória, e assina por você. Você digita a passphrase uma vez, e o `ssh` pede as assinaturas ao agente por um socket.
+
+```bash
+ssh-agent -s
+```
+
+```
+SSH_AUTH_SOCK=/home/user/.ssh/agent/s.xxxxxxxxxx.agent.P3P91wFZR5; export SSH_AUTH_SOCK;
+SSH_AGENT_PID=907797; export SSH_AGENT_PID;
+echo Agent pid 907797;
+```
+
+```bash
+ssh-add -t 1h ~/.ssh/id_ed25519
+```
+
+```
+Identity added: /home/user/.ssh/id_ed25519 (user@davidcosta.dev)
+Lifetime set to 01:00:00
+```
+
+```bash
+ssh-add -l
+```
+
+```
+256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA user@davidcosta.dev (ED25519)
+```
+
+O `-t 1h` define um tempo de vida: depois de uma hora, a chave sai do agente e a passphrase volta a ser pedida.
+
+Na maioria dos desktops você não inicia o agente na mão: o GNOME, o KDE, o macOS e o Windows já têm um. Descobrir qual está rodando e como configurá-lo faz parte do [artigo de recomendações](/pt-br/articles/keeping-ssh-keys-safe).
+
+O ponto de segurança: pelo protocolo, o agente não entrega a chave para ninguém, só assina. Mas qualquer processo que consiga falar com o socket pode pedir assinaturas, e uma assinatura é tudo o que um servidor pede para deixar entrar.
+
+## Os problemas de segurança, um por um
+
+### Chave sem passphrase
+
+É o problema mais comum. Uma chave sem passphrase é como uma senha escrita num arquivo: ela vaza em backups, em cópias da pasta home, em repositórios publicados por engano. Use passphrase em toda chave de uso pessoal. Chaves de automação (um servidor de CI, um script de backup) costumam não ter passphrase porque não tem ninguém para digitá-la, e por isso mesmo devem ser restritas no servidor (veja `authorized_keys` abaixo).
+
+### Agent forwarding
+
+O `ssh -A` (ou `ForwardAgent yes`) leva o seu agente até o servidor: lá, programas conseguem pedir assinaturas ao agente do seu computador. É prático, porque do servidor você faz `git pull` com a chave que está no seu notebook. Mas veja o que o servidor enxerga:
+
+```bash
+ssh -A -p 2222 localhost 'echo $SSH_AUTH_SOCK; ssh-add -l'
+```
+
+```
+/home/user/.ssh/agent/s.xxxxxxxxxx.sshd.lBovG9pBll
+256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA user@davidcosta.dev (ED25519)
+```
+
+Esse socket existe no servidor enquanto você está conectado. Quem tem root lá, ou quem invadiu a sua conta lá, pode usá-lo para se autenticar como você em qualquer outro lugar que aceite essas chaves: outros servidores, o GitHub. O manual do `ssh_config` é direto: o atacante não obtém a chave, mas consegue fazer operações com ela.
+
+As alternativas:
+
+- Para chegar num servidor passando por outro (um _bastion_), use `ssh -J bastion servidor` (`ProxyJump`). A conexão atravessa o bastion já criptografada, e o agente fica no seu computador.
+- Se você precisa mesmo do forwarding, adicione a chave com `ssh-add -c`: cada uso pede confirmação na sua tela. Ou restrinja onde a chave pode ser usada com `ssh-add -h`, disponível desde o OpenSSH 8.9.
+
+### Ignorar o aviso de host key
+
+Quando a host key de um servidor muda, o cliente bloqueia a conexão:
+
+```
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+Someone could be eavesdropping on you right now (man-in-the-middle attack)!
+It is also possible that a host key has just been changed.
+The fingerprint for the ED25519 key sent by the remote host is
+SHA256:PMrsD/Gq8l3ING2EDJJkdc4TPnMk29a7hELlNdPDC7o.
+Please contact your system administrator.
+Add correct host key in /home/user/.ssh/known_hosts to get rid of this message.
+Offending ED25519 key in /home/user/.ssh/known_hosts:1
+  remove with:
+  ssh-keygen -f '/home/user/.ssh/known_hosts' -R '[localhost]:2222'
+Host key for [localhost]:2222 has changed and you have requested strict checking.
+Host key verification failed.
+```
+
+Aqui eu só gerei uma host key nova no servidor de laboratório, que é a causa mais comum: o servidor foi reinstalado, ou o IP agora aponta para outra máquina. Mas o aviso existe porque também pode ser alguém no meio da conexão, e é exatamente quando o aviso aparece que o `known_hosts` está fazendo o trabalho dele.
+
+O reflexo de rodar o `ssh-keygen -R` sugerido e seguir em frente desliga essa proteção. Antes, confirme a mudança por outro canal: pergunte a quem administra o servidor, ou compare com o fingerprint publicado. Em março de 2023, o GitHub trocou a host key RSA dele depois que ela foi exposta por engano num repositório público, e todo mundo viu esse aviso. A atitude certa era conferir o novo fingerprint no blog e na documentação do GitHub, e só então remover a linha antiga.
+
+### Oferecer todas as chaves para todo servidor
+
+Lembra do "Offering public key"? Por padrão, o cliente oferece ao servidor todas as chaves que tem, uma por uma, até alguma ser aceita. Isso tem dois efeitos:
+
+- **Privacidade:** qualquer servidor em que você conecta fica sabendo as suas chaves públicas. Como as chaves do GitHub são públicas, um servidor pode cruzar as duas coisas e descobrir o seu usuário no GitHub.
+- **Bloqueio:** com muitas chaves no agente, você bate no limite de tentativas do servidor (`MaxAuthTries`, 6 por padrão) antes de chegar na certa e recebe `Too many authentication failures`.
+
+A solução é dizer qual chave usar em cada servidor, com `IdentityFile` e `IdentitiesOnly yes` no `~/.ssh/config`. O [artigo de recomendações](/pt-br/articles/keeping-ssh-keys-safe) tem um config de partida.
+
+### authorized_keys esquecidos
+
+Chaves que entram no `authorized_keys` costumam ficar lá para sempre: a do ex-colega, a do notebook que foi vendido, a do script que ninguém usa mais. Cada uma é uma porta. Revise o arquivo nos servidores que você administra, e as chaves cadastradas no GitHub ou no GitLab.
+
+O `authorized_keys` também aceita restrições por chave, antes do tipo. Uma chave de backup que só pode rodar um comando:
+
+```text
+restrict,command="echo running the backup..." ssh-rsa AAAAB3NzaC1yc2E... user@davidcosta.dev
+```
+
+Mesmo pedindo outra coisa, ela só roda o comando definido:
+
+```bash
+ssh -i ~/.ssh/backup servidor 'cat /etc/passwd'
+```
+
+```
+running the backup...
+```
+
+O `restrict` desliga tudo que não é essencial (forwarding de agente, de portas, de X11, terminal), e o `command=` fixa o comando. Outra restrição útil é a origem, com `from=`:
+
+```text
+from="10.0.0.0/8" ecdsa-sha2-nistp256 AAAAE2VjZHNh... user@davidcosta.dev
+```
+
+Vinda de fora dessa rede, a chave certa é recusada:
+
+```
+user@localhost: Permission denied (publickey).
+```
+
+E o servidor registra o motivo:
+
+```
+/home/user/.ssh/authorized_keys:4: Authentication tried for user with correct key but not from a permitted host (host=127.0.0.1, ip=127.0.0.1, required=10.0.0.0/8).
+```
+
+### Uma chave para tudo
+
+Uma chave copiada para o notebook, o desktop e o servidor de CI significa que um vazamento em qualquer um deles compromete todos, e que você não consegue revogar o acesso de um sem refazer os outros. O padrão mais seguro é uma chave por dispositivo: se o notebook for roubado, você apaga só a chave dele, de todo lugar, e o resto continua funcionando.
+
+## Resumo
+
+- A chave privada assina e nunca sai do seu computador. A pública só confere e pode ser exposta.
+- Na conexão, o servidor prova a identidade dele com a host key (guardada no `known_hosts`), os dois lados combinam uma chave de sessão (pós-quântica por padrão desde o OpenSSH 10.0) e você prova a sua com uma assinatura.
+- Use Ed25519. RSA serve com 3072 bits ou mais. DSA não existe mais. Evite ECDSA P-521 gerada ou usada no PuTTY antes da versão 0.81.
+- Sem passphrase, o arquivo da chave é a credencial inteira.
+- O agente evita digitar a passphrase toda hora, mas qualquer um que alcance o socket pode assinar por você. Isso inclui o root do servidor quando você usa `ssh -A`.
+- O aviso de host key alterada é a proteção funcionando: confirme antes de apagar a linha.
+- Diga qual chave usar em cada servidor, restrinja chaves de automação e revise o `authorized_keys`.
+
+O próximo passo é prático: [Como manter suas chaves SSH seguras no Linux, macOS e Windows](/pt-br/articles/keeping-ssh-keys-safe).
+
+## Fontes
+
+- [Release notes do OpenSSH](https://www.openssh.org/releasenotes.html)
+- [Manual do ssh-keygen](https://man.openbsd.org/ssh-keygen.1)
+- [Manual do ssh_config](https://man.openbsd.org/ssh_config.5)
+- [Manual do sshd: formato do authorized_keys](https://man.openbsd.org/sshd.8#AUTHORIZED_KEYS_FILE_FORMAT)
+- [Fingerprints das chaves SSH do GitHub](https://docs.github.com/pt/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints)
+- [CVE-2024-31497: chaves P-521 no PuTTY (oss-security)](https://www.openwall.com/lists/oss-security/2024/04/15/6)
+
+import { ArticleWrapper } from '../ArticleWrapper';
+
+export const metadata = {
+  title: 'Chaves SSH por dentro: como funcionam, os tipos e os riscos',
+  date: '2026-10-15T12:00:00.000Z',
+  lang: 'pt-br',
+  draft: true,
+  tags: ['linux', 'security', 'ssh'],
+  description:
+    'O que acontece quando você conecta com uma chave SSH, a diferença entre Ed25519, RSA e ECDSA, o que a passphrase e o agente fazem e os problemas de segurança mais comuns, com outputs reais.',
+  keywords: [
+    'ssh',
+    'chave ssh',
+    'ed25519',
+    'rsa',
+    'ssh-agent',
+    'known_hosts',
+    'authorized_keys',
+    'segurança',
+  ],
+  authors: {
+    name: 'David Costa',
+  },
+  alternates: {
+    canonical: '/pt-br/articles/how-ssh-keys-work',
+  },
+};
+
+export default ({ children }) => (
+  <ArticleWrapper meta={metadata} toc={toc} readingTime={readingTime}>
+    {children}
+  </ArticleWrapper>
+);
