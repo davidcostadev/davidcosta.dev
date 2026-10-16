@@ -1,0 +1,383 @@
+## Antes de começar
+
+Um cenário comum: você entra no desktop a partir do notebook, abre um tmux e deixa um processo longo rodando lá, como um build ou um agente de IA. Mais tarde, já sentado no desktop, um `git push` falha com `Permission denied (publickey)`. Você roda `ssh-add`, digita a passphrase, `ssh-add -l` mostra a chave, e o push continua falhando. A chave está no agente. Só não está no agente que aquele processo usa.
+
+Este artigo completa os outros dois sobre SSH: [Chaves SSH por dentro](/pt-br/articles/how-ssh-keys-work) explica o que o agente é, e [Como manter suas chaves SSH seguras](/pt-br/articles/keeping-ssh-keys-safe) mostra como configurá-lo em cada sistema. Aqui o assunto é o que acontece quando você tem mais de um: um no notebook, um no desktop, e uma VPS no meio.
+
+Os outputs foram capturados com o OpenSSH 10.2p1 no Ubuntu 26.04, num laboratório: dois servidores `sshd` locais, um fazendo o papel do desktop (porta 2222) e outro o da VPS (porta 2223), e dois agentes, um com a chave do "notebook" e outro com a do "desktop". As chaves foram geradas só para este artigo e apagadas ao fim do laboratório. Nos outputs, a usuária é a `alice`, a personagem de sempre dos exemplos de criptografia, e o identificador da máquina nos sockets foi trocado por um fictício.
+
+## O cenário
+
+Três máquinas, cada uma com a sua chave e a sua passphrase, como o [outro artigo](/pt-br/articles/keeping-ssh-keys-safe#uma-chave-por-dispositivo-e-nada-de-backup) recomenda:
+
+| Máquina  | Chave            | Onde ela entra                     |
+| -------- | ---------------- | ---------------------------------- |
+| Notebook | `alice@notebook` | No desktop                         |
+| Desktop  | `alice@desktop`  | Na VPS (e no GitHub, no dia a dia) |
+| VPS      | nenhuma          | Não entra em lugar nenhum          |
+
+No desktop, o `~/.ssh/config` diz qual chave usar na VPS:
+
+```text
+Host vps
+  HostName 127.0.0.1
+  Port 2223
+  IdentityFile ~/.ssh/id_ed25519
+
+Host *
+  IdentitiesOnly yes
+```
+
+Num terminal aberto no próprio desktop, funciona:
+
+```bash
+ssh vps 'echo conectado na vps'
+```
+
+```
+conectado na vps
+```
+
+Numa sessão aberta no mesmo desktop a partir do notebook, com `ssh -A`, o mesmo comando falha:
+
+```
+alice@127.0.0.1: Permission denied (publickey).
+```
+
+Mesma usuária, mesmo desktop, mesmo `~/.ssh/config`, mesmo arquivo de chave. O que mudou foi o agente.
+
+## Cada processo herda um SSH_AUTH_SOCK
+
+O `ssh` encontra o agente pela variável `SSH_AUTH_SOCK`, que aponta para um socket. Como toda variável de ambiente, ela é **copiada do processo pai quando o processo começa**, e depois disso não muda mais. Então a pergunta "qual agente o meu `git push` usa?" tem a mesma resposta que "onde foi aberto o terminal, ou o programa, que rodou esse `git push`?".
+
+Num terminal do desktop:
+
+```bash
+echo $SSH_AUTH_SOCK
+ssh-add -l
+```
+
+```
+/home/alice/.ssh/agent/s.Wq7tP2mZ9d.agent.jBB1fDJ5o2
+256 SHA256:hTrKouykkMS6FKzitdJPtSzrF5jmvUBOmUL2IZ6KA8k alice@desktop (ED25519)
+```
+
+Numa sessão aberta a partir do notebook com `ssh -A`:
+
+```
+/home/alice/.ssh/agent/s.Wq7tP2mZ9d.sshd.vtnmHsd5Kh
+256 SHA256:OeS46tQiOLmflI7yMvBz5+/NC6VtJCknfYGpjJVdOnU alice@notebook (ED25519)
+```
+
+E a partir do notebook sem `-A`, não tem agente nenhum:
+
+```
+[]
+Could not open a connection to your authentication agent.
+```
+
+Desde o OpenSSH 10.1, os sockets ficam em `~/.ssh/agent/`, e o nome já conta de onde o agente veio: `.agent.` é um `ssh-agent` rodando nesta máquina, `.sshd.` é um agente **encaminhado**, que na verdade está do outro lado de uma conexão SSH. Em versões mais antigas, ou com outros agentes, o caminho é diferente, mas a lógica é a mesma.
+
+Os lugares mais comuns, num desktop Linux:
+
+| Onde o processo começou              | `SSH_AUTH_SOCK`                      | Chaves                                                        |
+| ------------------------------------ | ------------------------------------ | ------------------------------------------------------------- |
+| Terminal do GNOME                    | `/run/user/1000/gcr/ssh`             | As do desktop                                                 |
+| `ssh -A` vindo de outra máquina      | `~/.ssh/agent/s.*.sshd.*`            | As da outra máquina                                           |
+| `ssh` sem `-A`                       | vazio                                | Nenhuma                                                       |
+| `cron`, serviços do systemd          | vazio                                | Nenhuma                                                       |
+| tmux, screen                         | o de quem criou a sessão ou o painel | Depende ([abaixo](#tmux-o-ambiente-é-de-quem-criou-o-painel)) |
+| Agente de IA, IDE, qualquer programa | o do terminal em que ele foi aberto  | Idem                                                          |
+
+O `/run/user/1000/gcr/ssh` vem do `gcr-ssh-agent.socket`, uma unidade de usuário do systemd que coloca o caminho no ambiente da sessão gráfica (o `1000` é o seu UID, `id -u`). Os terminais abertos no desktop herdam esse valor. Uma sessão SSH não passa pela sessão gráfica: recebe do `sshd` o agente encaminhado, ou nada.
+
+## O servidor aceitou a chave, e mesmo assim negou
+
+O `ssh -v` mostra por que a sessão aberta pelo notebook falhou. No desktop, com o agente dele:
+
+```bash
+ssh -v vps true 2>&1 | grep -E 'Will attempt key|Offering|Server accepts|read_passphrase|Permission denied|Authenticated to'
+```
+
+```
+debug1: Will attempt key: /home/alice/.ssh/id_ed25519 ED25519 SHA256:hTrKouykkMS6FKzitdJPtSzrF5jmvUBOmUL2IZ6KA8k explicit agent
+debug1: Offering public key: /home/alice/.ssh/id_ed25519 ED25519 SHA256:hTrKouykkMS6FKzitdJPtSzrF5jmvUBOmUL2IZ6KA8k explicit agent
+debug1: Server accepts key: /home/alice/.ssh/id_ed25519 ED25519 SHA256:hTrKouykkMS6FKzitdJPtSzrF5jmvUBOmUL2IZ6KA8k explicit agent
+Authenticated to 127.0.0.1 ([127.0.0.1]:2223) using "publickey".
+```
+
+Na sessão aberta pelo notebook:
+
+```
+debug1: Will attempt key: /home/alice/.ssh/id_ed25519 ED25519 SHA256:hTrKouykkMS6FKzitdJPtSzrF5jmvUBOmUL2IZ6KA8k explicit
+debug1: Offering public key: /home/alice/.ssh/id_ed25519 ED25519 SHA256:hTrKouykkMS6FKzitdJPtSzrF5jmvUBOmUL2IZ6KA8k explicit
+debug1: Server accepts key: /home/alice/.ssh/id_ed25519 ED25519 SHA256:hTrKouykkMS6FKzitdJPtSzrF5jmvUBOmUL2IZ6KA8k explicit
+debug1: read_passphrase: can't open /dev/tty: No such device or address
+alice@127.0.0.1: Permission denied (publickey).
+```
+
+A diferença está na última palavra das três primeiras linhas: `explicit agent` contra só `explicit`.
+
+1. O `IdentityFile` e o `IdentitiesOnly yes` fazem o `ssh` oferecer só a chave do desktop. A do notebook, que está no agente encaminhado, nem é oferecida.
+2. A VPS conhece essa chave: `Server accepts key`. Falta provar que você tem a chave privada, assinando um desafio.
+3. Para assinar, o `ssh` pergunta ao agente. No desktop, o agente tem a chave (`agent`) e assina. Na sessão aberta pelo notebook, o agente é o do notebook, que não tem essa chave.
+4. Sem o agente, o `ssh` abre o arquivo `~/.ssh/id_ed25519`. Ele tem passphrase, então precisa perguntar a alguém.
+5. Ninguém responde: a sessão não tem terminal (`can't open /dev/tty`), e a autenticação falha.
+
+Por isso `ssh-add -l` mostrando uma chave não prova nada sozinho: precisa ser **a** chave que aquele servidor aceita, no agente que **aquele** processo enxerga.
+
+## Sem terminal, a passphrase vai para o ssh-askpass
+
+Quando o `ssh` ou o `ssh-add` precisam de uma passphrase, eles perguntam no terminal de onde foram rodados. Se não tem terminal, como num `cron`, numa IDE, num agente de IA ou num comando disparado por outro programa, o manual do `ssh` descreve o plano B: se `DISPLAY` está definida, ele executa o programa de `SSH_ASKPASS` para abrir uma janela e perguntar por lá. Sem `SSH_ASKPASS`, ele usa o padrão compilado, que no Ubuntu é `/usr/bin/ssh-askpass`.
+
+Os três casos, com o `ssh-add` rodando sem terminal:
+
+Sem `DISPLAY`, ele tenta ler da entrada padrão. Como ela está vazia, fica só o prompt:
+
+```
+Enter passphrase for /home/alice/.ssh/id_ed25519:
+```
+
+Com `DISPLAY` e sem nenhum `ssh-askpass` instalado:
+
+```
+ssh_askpass: exec(/usr/bin/ssh-askpass): No such file or directory
+```
+
+E o `ssh` da sessão aberta pelo notebook, quando a variável `DISPLAY` existe:
+
+```
+ssh_askpass: exec(/usr/bin/ssh-askpass): No such file or directory
+alice@127.0.0.1: Permission denied (publickey).
+```
+
+A mensagem fala do askpass, mas o problema está dois passos antes: o agente errado.
+
+A variável `SSH_ASKPASS_REQUIRE` controla esse comportamento:
+
+- `never`: nunca usa o askpass.
+- `prefer`: usa o askpass mesmo quando tem terminal.
+- `force`: usa o askpass mesmo sem `DISPLAY`.
+
+O `ssh-agent.service` do Ubuntu, por exemplo, roda com `SSH_ASKPASS_REQUIRE=force`, porque um agente iniciado pelo systemd nunca tem terminal.
+
+Não resolva isso com um `SSH_ASKPASS` que imprime a passphrase. Funciona (o laboratório deste artigo carregou as chaves descartáveis assim, para não ter ninguém digitando), mas deixa a passphrase gravada num arquivo, e uma chave com a passphrase do lado é uma chave sem passphrase.
+
+## O agente encaminhado morre com a conexão
+
+O socket `.sshd.` só existe enquanto a conexão que o trouxe está aberta. Fechou o notebook, trocou de rede, a conexão caiu: o socket some, mas a variável continua apontando para ele em todo processo que a herdou. Num painel aberto pelo notebook, depois que o notebook desconectou:
+
+```bash
+echo $SSH_AUTH_SOCK
+ssh-add -l
+```
+
+```
+/home/alice/.ssh/agent/s.Wq7tP2mZ9d.sshd.rjLm6DoUqk
+Error connecting to agent: No such file or directory
+```
+
+Para um programa de longa duração, como um agente de IA, um `tmux` ou um `screen`, isso significa que ele fica preso ao agente da conexão em que foi aberto. Se essa conexão foi a do notebook, ele usa a chave do notebook enquanto você está conectado, e nenhuma depois.
+
+## tmux: o ambiente é de quem criou o painel
+
+O tmux complica um pouco mais, porque é um servidor que sobrevive às conexões. Ele copia algumas variáveis do cliente para o ambiente da **sessão**, e a lista padrão já inclui o `SSH_AUTH_SOCK`:
+
+```bash
+tmux show-options -g update-environment
+```
+
+```
+update-environment[0] DISPLAY
+update-environment[1] KRB5CCNAME
+update-environment[2] MSYSTEM
+update-environment[3] SSH_ASKPASS
+update-environment[4] SSH_AUTH_SOCK
+update-environment[5] SSH_AGENT_PID
+update-environment[6] SSH_CONNECTION
+update-environment[7] WINDOWID
+update-environment[8] XAUTHORITY
+```
+
+Pelo manual, essa cópia acontece quando uma sessão é criada ou quando você se conecta a uma que já existe (`attach`). Ela vale para os painéis abertos **depois** disso. Painéis que já existiam continuam com o ambiente que tinham.
+
+No laboratório, abri um tmux pelo terminal do desktop (sessão `desktop`) e, depois, uma sessão nova no mesmo tmux a partir do notebook (sessão `notebook`):
+
+```bash
+tmux show-environment -g SSH_AUTH_SOCK
+tmux show-environment -t desktop SSH_AUTH_SOCK
+tmux show-environment -t notebook SSH_AUTH_SOCK
+```
+
+```
+SSH_AUTH_SOCK=/home/alice/.ssh/agent/s.Wq7tP2mZ9d.agent.jBB1fDJ5o2
+SSH_AUTH_SOCK=/home/alice/.ssh/agent/s.Wq7tP2mZ9d.agent.jBB1fDJ5o2
+SSH_AUTH_SOCK=/home/alice/.ssh/agent/s.Wq7tP2mZ9d.sshd.rjLm6DoUqk
+```
+
+Duas sessões no mesmo tmux, dois agentes. A do notebook é a do output da seção anterior: depois que o notebook desconectou, o agente dela deixou de existir. A do desktop continua funcionando.
+
+O inverso também acontece. Se você se conectar pelo notebook a uma sessão aberta no desktop, os painéis novos passam a usar o agente do notebook, e os antigos continuam com o do desktop. É assim que dois painéis lado a lado podem dar resultados diferentes para o mesmo `git push`.
+
+Para um painel velho usar o agente atual da sessão, puxe o valor do tmux:
+
+```bash
+tmux show-environment -s SSH_AUTH_SOCK
+```
+
+```
+SSH_AUTH_SOCK="/home/alice/.ssh/agent/s.Wq7tP2mZ9d.agent.jBB1fDJ5o2"; export SSH_AUTH_SOCK;
+```
+
+O `-s` imprime no formato do shell, então `eval "$(tmux show-environment -s SSH_AUTH_SOCK)"` atualiza o painel. Um programa que já está rodando nele não muda: ele herdou a variável quando começou, e precisa ser reiniciado.
+
+## Fixar o agente por servidor: IdentityAgent
+
+Se você quer que um servidor sempre use um agente específico, não importa de onde a sessão veio, o `ssh_config` tem a opção `IdentityAgent`. Pelo manual, ela tem prioridade sobre o `SSH_AUTH_SOCK`, aceita `none` para não usar agente nenhum, e aceita variáveis de ambiente no caminho.
+
+Na sessão aberta pelo notebook, apontando para o agente do desktop:
+
+```bash
+ssh -o IdentityAgent=/home/alice/.ssh/agent/s.Wq7tP2mZ9d.agent.jBB1fDJ5o2 vps 'echo conectado na vps'
+```
+
+```
+conectado na vps
+```
+
+Para deixar fixo, o agente precisa ter um caminho que não muda. O `ssh-agent` comum sorteia um nome a cada vez (aquele `jBB1fDJ5o2`), mas os agentes de sessão do Ubuntu têm caminho fixo: `/run/user/1000/gcr/ssh` no GNOME, ou `/run/user/1000/openssh_agent` com o `ssh-agent.socket` do systemd. No `~/.ssh/config` do desktop:
+
+```text
+Host vps
+  HostName 127.0.0.1
+  Port 2223
+  IdentityFile ~/.ssh/id_ed25519
+  IdentityAgent ${XDG_RUNTIME_DIR}/gcr/ssh
+```
+
+E o `ssh -G` confirma o que o `ssh` vai usar:
+
+```bash
+ssh -G vps | grep -E '^(identityfile|identityagent|identitiesonly|forwardagent) '
+```
+
+```
+identitiesonly yes
+identityagent /run/user/1000/gcr/ssh
+identityfile ~/.ssh/id_ed25519
+forwardagent no
+```
+
+Isso resolve o problema do início, mas pense no que significa antes de usar. Com o `IdentityAgent` apontando para o agente do desktop, quem chega pelo notebook passa a usar a chave do desktop, que nunca saiu de lá. Na prática, o notebook ganha o acesso do desktop sempre que a chave estiver carregada. E se não estiver, o `gcr-ssh-agent` pede a passphrase numa janela na tela do desktop, que você não vê do notebook.
+
+## Notebook, desktop e VPS: um jeito de organizar
+
+Com as peças acima, a organização que eu recomendo é deixar cada chave assinar só na máquina onde ela está, e autorizar cada máquina nos lugares para onde ela vai, em vez de levar agentes de um lado para o outro.
+
+| De → para                            | Como                            | Quem assina                               |
+| ------------------------------------ | ------------------------------- | ----------------------------------------- |
+| Notebook → desktop                   | `ssh desktop`, sem `-A`         | A chave do notebook                       |
+| Notebook → VPS                       | `ssh -J desktop vps`, ou direto | A chave do notebook, cadastrada na VPS    |
+| Desktop → VPS, GitHub                | `ssh vps`, `git push`           | A chave do desktop                        |
+| Sessão aberta pelo notebook → GitHub | Veja abaixo                     | Você escolhe                              |
+| VPS → GitHub                         | Uma _deploy key_ da própria VPS | A chave da VPS, limitada a um repositório |
+
+**Notebook → VPS passando pelo desktop.** Com o `ProxyJump`, a conexão atravessa o desktop já criptografada, e quem se autentica na VPS é a chave do notebook, direto do agente do notebook. Nada é encaminhado:
+
+```text
+Host vps-via-desktop
+  HostName 127.0.0.1
+  Port 2223
+  IdentityFile ~/.ssh/id_ed25519
+  ProxyJump desktop
+```
+
+```bash
+ssh vps-via-desktop 'echo "conectado na vps; agente: [$SSH_AUTH_SOCK]"'
+```
+
+```
+conectado na vps; agente: []
+```
+
+A troca é cadastrar a chave do notebook no `authorized_keys` da VPS. É mais uma linha para revisar, mas cada linha tem dono: se o notebook for perdido, você remove a dele e o desktop continua entrando.
+
+**Trabalho iniciado pelo notebook que precisa de `git push`.** É o caso do começo do artigo, e não tem resposta sem custo:
+
+- **Encaminhar o agente do notebook** (`ssh -A desktop`) e cadastrar a chave do notebook no GitHub. O push sai assinado pelo notebook, e para quando você desconecta. É o risco do agent forwarding que o [outro artigo](/pt-br/articles/how-ssh-keys-work#agent-forwarding) descreve, num servidor que é seu.
+- **`IdentityAgent` para o agente do desktop**, como na seção anterior. Funciona enquanto o desktop tiver a chave carregada, e dá ao notebook o acesso do desktop.
+- **Deixar o push para quando estiver no desktop**, ou rodá-lo num terminal aberto lá. É o mais simples.
+
+**A passphrase em cada máquina.** Cada agente guarda as chaves da própria máquina, então você digita cada passphrase na máquina dela, de preferência com tempo de vida (`ssh-add -t 8h`, ou a janela do GNOME e o chaveiro). Se uma das máquinas não tem interface gráfica, como um servidor ou um celular com Termux, cuidado com a confirmação: o `ssh-add -c` depende de um `ssh-askpass` para mostrar a pergunta, e sem um, [todo uso é negado](/pt-br/articles/keeping-ssh-keys-safe#tempo-de-vida-e-confirmação). Lá, fique com o tempo de vida.
+
+**A VPS não recebe agente nenhum.** Se ela precisa de `git pull`, use uma deploy key dela, restrita ao repositório.
+
+## Diagnóstico em quatro comandos
+
+Quando um `ssh` ou um `git push` falha com `Permission denied (publickey)` e você tem certeza de que a chave está no agente, rode, **no mesmo terminal ou painel que falhou**:
+
+1. **Qual agente:** `echo $SSH_AUTH_SOCK`. Vazio é nenhum; `.sshd.` é um agente encaminhado, de outra máquina.
+2. **Quais chaves ele tem:** `ssh-add -l`. `Error connecting to agent` com o caminho preenchido é um socket que morreu, quase sempre o de uma conexão que caiu.
+3. **Qual chave o ssh vai usar:** `ssh -G servidor | grep -E '^(identityfile|identityagent|identitiesonly) '`.
+4. **O que aconteceu:** `ssh -v servidor true 2>&1 | grep -E 'Will attempt|Offering|Server accepts|read_passphrase|askpass|Permission'`. `Server accepts key` sem `agent` no fim da linha é a chave certa no agente errado.
+
+Para ver todos os agentes que você tem nesta máquina, e o que cada um guarda:
+
+```bash
+for s in ~/.ssh/agent/s.* /run/user/$(id -u)/gcr/ssh /run/user/$(id -u)/openssh_agent; do
+  [ -S "$s" ] && echo "== $s" && SSH_AUTH_SOCK="$s" ssh-add -l
+done
+```
+
+## Resumo
+
+- O `ssh` usa o agente do `SSH_AUTH_SOCK`, e essa variável é herdada de onde o processo começou: terminal do desktop, sessão SSH, tmux, `cron`.
+- Um agente encaminhado tem as chaves da **outra** máquina e morre com a conexão.
+- No tmux, cada painel fica com o agente que a sessão tinha quando ele foi aberto.
+- `Server accepts key` sem `agent` quer dizer que a chave certa não está no agente que aquele processo enxerga. A mensagem de askpass que vem depois é consequência, não a causa.
+- Sem terminal, a passphrase vai para o `ssh-askpass`, e sem ele, falha.
+- `IdentityAgent` fixa o agente por servidor; `ProxyJump` atravessa um servidor sem levar o agente.
+- Uma chave por máquina, cada uma cadastrada onde aquela máquina vai, em vez de agentes viajando entre elas.
+
+## Fontes
+
+- [Manual do ssh: variáveis de ambiente (SSH_ASKPASS, SSH_ASKPASS_REQUIRE, SSH_AUTH_SOCK)](https://man.openbsd.org/ssh.1#ENVIRONMENT)
+- [Manual do ssh_config: IdentityAgent, IdentitiesOnly, ProxyJump](https://man.openbsd.org/ssh_config.5)
+- [Manual do ssh-agent](https://man.openbsd.org/ssh-agent.1)
+- [Manual do ssh-add](https://man.openbsd.org/ssh-add.1)
+- [Manual do tmux: update-environment](https://man.openbsd.org/tmux.1#update-environment)
+- [Notas de versão do OpenSSH](https://www.openssh.org/releasenotes.html)
+
+import { ArticleWrapper } from '../ArticleWrapper';
+
+export const metadata = {
+  title: 'Qual agente SSH assina por você: notebook, desktop e VPS',
+  date: '2026-10-16T12:00:00.000Z',
+  lang: 'pt-br',
+  tags: ['linux', 'security', 'ssh'],
+  draft: true,
+  description:
+    'Por que a chave está no agente e o ssh continua negando: SSH_AUTH_SOCK herdado, agent forwarding, tmux, ssh-askpass e IdentityAgent, num cenário com notebook, desktop e VPS.',
+  keywords: [
+    'ssh',
+    'ssh-agent',
+    'SSH_AUTH_SOCK',
+    'ssh-askpass',
+    'agent forwarding',
+    'tmux',
+    'IdentityAgent',
+    'linux',
+  ],
+  authors: {
+    name: 'David Costa',
+  },
+  alternates: {
+    canonical: '/pt-br/articles/ssh-agents-across-devices',
+  },
+};
+
+export default ({ children }) => (
+  <ArticleWrapper meta={metadata} toc={toc} readingTime={readingTime}>
+    {children}
+  </ArticleWrapper>
+);
