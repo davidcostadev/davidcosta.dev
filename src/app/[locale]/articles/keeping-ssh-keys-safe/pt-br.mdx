@@ -2,7 +2,7 @@
 
 Este artigo é a parte prática de [Chaves SSH por dentro: como funcionam, os tipos e os riscos](/pt-br/articles/how-ssh-keys-work). Lá estão o porquê de cada recomendação: o que a passphrase protege, o risco do agent forwarding, por que oferecer todas as chaves a todo servidor é ruim. Aqui está o que fazer, sistema por sistema.
 
-Os comandos de Linux foram rodados com o OpenSSH 10.2p1 no Ubuntu 26.04, e os outputs são reais, com o nome de usuário trocado por um genérico, `user`. Os de macOS e Windows seguem a documentação da Apple, da Microsoft e dos projetos citados, mas não foram capturados aqui: compare cada passo com o que o seu sistema mostrar.
+Os comandos de Linux foram rodados com o OpenSSH 10.2p1 no Ubuntu 26.04, e os outputs são reais, com o nome de usuário trocado pela `alice`, a personagem de sempre dos exemplos de criptografia. Os de macOS e Windows seguem a documentação da Apple, da Microsoft e dos projetos citados, mas não foram capturados aqui: compare cada passo com o que o seu sistema mostrar.
 
 ## O que vale em todo sistema
 
@@ -80,13 +80,13 @@ ls -la ~/.ssh
 
 ```
 total 20
-drwx------ 2 user user 140 Oct 15 13:14 .
-drwxrwxr-x 3 user user  60 Oct 15 13:14 ..
--rw------- 1 user user 101 Oct 15 13:14 authorized_keys
--rw------- 1 user user  28 Oct 15 13:14 config
--rw------- 1 user user 464 Oct 15 13:14 id_ed25519
--rw-r--r-- 1 user user 101 Oct 15 13:14 id_ed25519.pub
--rw-r--r-- 1 user user  37 Oct 15 13:14 known_hosts
+drwx------ 2 alice alice 140 Oct 15 13:14 .
+drwxrwxr-x 3 alice alice  60 Oct 15 13:14 ..
+-rw------- 1 alice alice 101 Oct 15 13:14 authorized_keys
+-rw------- 1 alice alice  28 Oct 15 13:14 config
+-rw------- 1 alice alice 464 Oct 15 13:14 id_ed25519
+-rw-r--r-- 1 alice alice 101 Oct 15 13:14 id_ed25519.pub
+-rw-r--r-- 1 alice alice  37 Oct 15 13:14 known_hosts
 ```
 
 | Arquivo                                   | Permissão          | Quem acessa              |
@@ -134,7 +134,7 @@ ssh-keygen -p -f ~/.ssh/id_ed25519
 ```
 
 ```
-Key has comment 'user@davidcosta.dev'
+Key has comment 'alice@davidcosta.dev'
 Enter new passphrase (empty for no passphrase):
 Enter same passphrase again:
 Your identification has been saved with the new passphrase.
@@ -158,7 +158,7 @@ ssh-add -t 8h ~/.ssh/id_ed25519
 ```
 
 ```
-Identity added: /home/user/.ssh/id_ed25519 (user@davidcosta.dev)
+Identity added: /home/alice/.ssh/id_ed25519 (alice@davidcosta.dev)
 Lifetime set to 08:00:00
 ```
 
@@ -171,7 +171,7 @@ ssh-add -c -t 8h ~/.ssh/id_ed25519
 ```
 
 ```
-Identity added: /home/user/.ssh/id_ed25519 (user@davidcosta.dev)
+Identity added: /home/alice/.ssh/id_ed25519 (alice@davidcosta.dev)
 Lifetime set to 08:00:00
 The user must confirm each use of the key
 ```
@@ -179,8 +179,8 @@ The user must confirm each use of the key
 Cada assinatura abre uma janela perguntando se você permite. Negando, quem pediu recebe isto:
 
 ```
-sign_and_send_pubkey: signing failed for ED25519 "user@davidcosta.dev" from agent: agent refused operation
-user@localhost: Permission denied (publickey).
+sign_and_send_pubkey: signing failed for ED25519 "alice@davidcosta.dev" from agent: agent refused operation
+alice@localhost: Permission denied (publickey).
 ```
 
 A janela vem de um programa `ssh-askpass`: no GNOME, o próprio `gcr-ssh-agent` traz o dele; no KDE, é o `ksshaskpass`. Sem nenhum, a confirmação não tem como acontecer e todo uso é negado, então em servidores e no WSL sem interface gráfica fique só com o tempo de vida. No config, o equivalente é `AddKeysToAgent confirm 8h`.
@@ -196,7 +196,7 @@ ssh-add -D
 Com uma chave FIDO2, como um YubiKey (série 5) ou um Nitrokey 3, a chave privada é gerada dentro do dispositivo e não sai de lá. O OpenSSH das distribuições principais já vem com suporte:
 
 ```bash
-ssh-keygen -t ed25519-sk -O verify-required -C "user@davidcosta.dev"
+ssh-keygen -t ed25519-sk -O verify-required -C "alice@davidcosta.dev"
 ```
 
 - O dispositivo pede um **toque** a cada uso, por padrão.
@@ -283,7 +283,7 @@ ssh -V
 As chaves ficam em `C:\Users\VOCÊ\.ssh`, ou `$env:USERPROFILE\.ssh`. O `ssh-keygen` é o mesmo, e o padrão também é Ed25519:
 
 ```powershell
-ssh-keygen -t ed25519 -C "user@davidcosta.dev"
+ssh-keygen -t ed25519 -C "alice@davidcosta.dev"
 ```
 
 ### Permissões
@@ -336,7 +336,7 @@ Se você usa o PuTTY, ou programas que o embutem (FileZilla, WinSCP, TortoiseGit
 O OpenSSH do Windows usa a API WebAuthn do próprio sistema, então chaves físicas FIDO2 funcionam sem instalar nada:
 
 ```powershell
-ssh-keygen -t ed25519-sk -O verify-required -C "user@davidcosta.dev"
+ssh-keygen -t ed25519-sk -O verify-required -C "alice@davidcosta.dev"
 ```
 
 O Windows mostra a própria janela pedindo o PIN e o toque. Usar o Windows Hello do computador como autenticador, em vez de um dispositivo físico, é instável: há [relatos](https://github.com/PowerShell/Win32-OpenSSH/issues/2408) de a janela trocar o Windows Hello por "celular ou chave USB" depois de atualizações.
@@ -374,10 +374,10 @@ ssh-keygen -lf ~/.ssh/authorized_keys
 ```
 
 ```
-256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA user@davidcosta.dev (ED25519)
-256 SHA256:cycriPjeX1MyKaDUPvNH4ySmfg8RVZe+EGnV/EImFnQ user@davidcosta.dev (ED25519)
-3072 SHA256:ypI93OhP6BnAPzWA7Ut6fzAxERVrO8R1Ot19RxPG204 user@davidcosta.dev (RSA)
-256 SHA256:uhpYBP/1S7pAB7Agqm4u9GbKMzEld7i7qIWH5Su8PH0 user@davidcosta.dev (ECDSA)
+256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA alice@davidcosta.dev (ED25519)
+256 SHA256:cycriPjeX1MyKaDUPvNH4ySmfg8RVZe+EGnV/EImFnQ alice@davidcosta.dev (ED25519)
+3072 SHA256:ypI93OhP6BnAPzWA7Ut6fzAxERVrO8R1Ot19RxPG204 alice@davidcosta.dev (RSA)
+256 SHA256:uhpYBP/1S7pAB7Agqm4u9GbKMzEld7i7qIWH5Su8PH0 alice@davidcosta.dev (ECDSA)
 ```
 
 2. **Gere uma chave nova** e cadastre no lugar da antiga.

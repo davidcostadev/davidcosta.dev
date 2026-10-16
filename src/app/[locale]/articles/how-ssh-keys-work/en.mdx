@@ -4,7 +4,7 @@ If you run `git push` or `ssh server` every day, you already use SSH keys. But i
 
 The practical recommendations for keeping keys on Linux, macOS and Windows are in a separate article: [Keeping your SSH keys safe on Linux, macOS and Windows](/en/articles/keeping-ssh-keys-safe).
 
-All outputs below were captured with OpenSSH 10.2p1 on Ubuntu 26.04, in a lab: keys generated just for this article (and already thrown away) and an `sshd` server running locally on port 2222. Paths were swapped for the usual ones, under `~/.ssh`, and the username and the machine identifier in the agent socket names for generic ones (`user`, `xxxxxxxxxx`).
+All outputs below were captured with OpenSSH 10.2p1 on Ubuntu 26.04, in a lab: keys generated just for this article (and already thrown away) and an `sshd` server running locally on port 2222. Paths were swapped for the usual ones, under `~/.ssh`, the username for `alice`, the usual character in cryptography examples, and the machine identifier in the agent socket names for a made-up one.
 
 ## Password or key: what's the difference
 
@@ -26,17 +26,17 @@ When you log in, the server doesn't ask for a secret: it asks for a signature ov
 ### Generating it
 
 ```bash
-ssh-keygen -t ed25519 -C "user@davidcosta.dev"
+ssh-keygen -t ed25519 -C "alice@davidcosta.dev"
 ```
 
 It asks where to save the key (the default is `~/.ssh/id_ed25519`), asks for a passphrase twice (more on that below) and prints:
 
 ```
 Generating public/private ed25519 key pair.
-Your identification has been saved in /home/user/.ssh/id_ed25519
-Your public key has been saved in /home/user/.ssh/id_ed25519.pub
+Your identification has been saved in /home/alice/.ssh/id_ed25519
+Your public key has been saved in /home/alice/.ssh/id_ed25519.pub
 The key fingerprint is:
-SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA user@davidcosta.dev
+SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA alice@davidcosta.dev
 The key's randomart image is:
 +--[ED25519 256]--+
 |     +o=+*=E.... |
@@ -66,7 +66,7 @@ cat ~/.ssh/id_ed25519.pub
 ```
 
 ```
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG9C7aiUs2CH+CJXLHOx47lH30/h/S6FQvMOy8Qh1bsl user@davidcosta.dev
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG9C7aiUs2CH+CJXLHOx47lH30/h/S6FQvMOy8Qh1bsl alice@davidcosta.dev
 ```
 
 It has three parts separated by spaces: the **type** (`ssh-ed25519`), the **key** in base64 and the **comment**. This is the line you paste into GitHub, or that goes into a server's `authorized_keys`.
@@ -132,7 +132,7 @@ ssh-keygen -y -f ~/.ssh/id_ed25519
 ```
 
 ```
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG9C7aiUs2CH+CJXLHOx47lH30/h/S6FQvMOy8Qh1bsl user@davidcosta.dev
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG9C7aiUs2CH+CJXLHOx47lH30/h/S6FQvMOy8Qh1bsl alice@davidcosta.dev
 ```
 
 The other direction doesn't exist: you can't get from the public key to the private one. That's what lets the public key be public.
@@ -200,13 +200,13 @@ Authenticated to localhost ([127.0.0.1]:2222) using "publickey".
 On the server, the log records which key got in, by its fingerprint:
 
 ```
-Accepted publickey for user from 127.0.0.1 port 50226 ssh2: ED25519 SHA256:cycriPjeX1MyKaDUPvNH4ySmfg8RVZe+EGnV/EImFnQ
+Accepted publickey for alice from 127.0.0.1 port 50226 ssh2: ED25519 SHA256:cycriPjeX1MyKaDUPvNH4ySmfg8RVZe+EGnV/EImFnQ
 ```
 
 Remember this line: when you need to find out which key was used to log in to a server, it's the one that tells you. A key that isn't in `authorized_keys` ends like this:
 
 ```
-user@localhost: Permission denied (publickey).
+alice@localhost: Permission denied (publickey).
 ```
 
 ## The files in ~/.ssh
@@ -231,7 +231,7 @@ ls -l ~/.ssh/id_ed25519
 ```
 
 ```
--rw-r--r-- 1 user user 464 Oct 15 13:14 /home/user/.ssh/id_ed25519
+-rw-r--r-- 1 alice alice 464 Oct 15 13:14 /home/alice/.ssh/id_ed25519
 ```
 
 The first column is the permission. After the first character (`-` for a file, `d` for a folder), there are three groups of three letters: what the **owner** can do, what the **group** can do and what **others** can do. `r` is read, `w` is write, `x` is execute, and `-` is not allowed. Here, the owner (`rw-`) reads and writes, and the group and others (`r--`) read. When you use the key:
@@ -244,10 +244,10 @@ ssh-keygen -y -f ~/.ssh/id_ed25519
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-Permissions 0644 for '/home/user/.ssh/id_ed25519' are too open.
+Permissions 0644 for '/home/alice/.ssh/id_ed25519' are too open.
 It is required that your private key files are NOT accessible by others.
 This private key will be ignored.
-Load key "/home/user/.ssh/id_ed25519": bad permissions
+Load key "/home/alice/.ssh/id_ed25519": bad permissions
 ```
 
 The fix is to take reading away from the group and others:
@@ -258,7 +258,7 @@ ls -l ~/.ssh/id_ed25519
 ```
 
 ```
--rw------- 1 user user 464 Oct 15 13:14 /home/user/.ssh/id_ed25519
+-rw------- 1 alice alice 464 Oct 15 13:14 /home/alice/.ssh/id_ed25519
 ```
 
 Each digit of `600` is one group, in the order owner, group and others, and adds up read (4), write (2) and execute (1): 6 is read and write, 0 is nothing. The [recommendations article](/en/articles/keeping-ssh-keys-safe#permissions) shows the permissions of the whole folder, including the Windows equivalent.
@@ -290,7 +290,7 @@ It's the default choice for good reasons: small keys, fast signatures and a desi
 RSA is the oldest type still in use and remains secure at a sufficient size. `ssh-keygen` defaults to 3072 bits:
 
 ```
-3072 SHA256:ypI93OhP6BnAPzWA7Ut6fzAxERVrO8R1Ot19RxPG204 user@davidcosta.dev (RSA)
+3072 SHA256:ypI93OhP6BnAPzWA7Ut6fzAxERVrO8R1Ot19RxPG204 alice@davidcosta.dev (RSA)
 ```
 
 Keys under 1024 bits are refused (`RequiredRSASize`). If your RSA key has 2048 bits or fewer, that's a good reason to switch to Ed25519.
@@ -337,7 +337,7 @@ ssh-keygen -y -P 'wrong' -f ~/.ssh/id_ed25519
 ```
 
 ```
-Load key "/home/user/.ssh/id_ed25519": incorrect passphrase supplied to decrypt private key
+Load key "/home/alice/.ssh/id_ed25519": incorrect passphrase supplied to decrypt private key
 ```
 
 Changing or adding a passphrase on an existing key doesn't change the key, so nothing needs updating on the servers:
@@ -347,7 +347,7 @@ ssh-keygen -p -f ~/.ssh/id_ed25519
 ```
 
 ```
-Key has comment 'user@davidcosta.dev'
+Key has comment 'alice@davidcosta.dev'
 Your identification has been saved with the new passphrase.
 ```
 
@@ -360,7 +360,7 @@ ssh-keygen -y -P '' -f ~/.ssh/id_ed25519
 ```
 
 ```
-Load key "/home/user/.ssh/id_ed25519": incorrect passphrase supplied to decrypt private key
+Load key "/home/alice/.ssh/id_ed25519": incorrect passphrase supplied to decrypt private key
 ```
 
 On a key without a passphrase, it opens and prints the public key:
@@ -370,7 +370,7 @@ ssh-keygen -y -P '' -f ~/.ssh/id_deploy
 ```
 
 ```
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFh6rzo4Fw99fY4UfOXgz0jUGFBlcRLrAIgliIFjy44J user@davidcosta.dev
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFh6rzo4Fw99fY4UfOXgz0jUGFBlcRLrAIgliIFjy44J alice@davidcosta.dev
 ```
 
 Since the passphrase tried is empty, nothing secret ends up in your shell history. To check every key in `~/.ssh` at once:
@@ -387,9 +387,9 @@ done
 ```
 
 ```
-NO passphrase: /home/user/.ssh/id_deploy
-passphrase: /home/user/.ssh/id_ed25519
-passphrase: /home/user/.ssh/id_rsa_old
+NO passphrase: /home/alice/.ssh/id_deploy
+passphrase: /home/alice/.ssh/id_ed25519
+passphrase: /home/alice/.ssh/id_rsa_old
 ```
 
 The loop counts as "passphrase" any key that didn't open, including for a different reason, like wrong permissions. If a key shows up that way when you didn't expect it, run `ssh-keygen -y` on it alone to see the message.
@@ -419,7 +419,7 @@ ssh-agent -s
 ```
 
 ```
-SSH_AUTH_SOCK=/home/user/.ssh/agent/s.xxxxxxxxxx.agent.P3P91wFZR5; export SSH_AUTH_SOCK;
+SSH_AUTH_SOCK=/home/alice/.ssh/agent/s.Wq7tP2mZ9d.agent.P3P91wFZR5; export SSH_AUTH_SOCK;
 SSH_AGENT_PID=907797; export SSH_AGENT_PID;
 echo Agent pid 907797;
 ```
@@ -429,7 +429,7 @@ ssh-add -t 8h ~/.ssh/id_ed25519
 ```
 
 ```
-Identity added: /home/user/.ssh/id_ed25519 (user@davidcosta.dev)
+Identity added: /home/alice/.ssh/id_ed25519 (alice@davidcosta.dev)
 Lifetime set to 08:00:00
 ```
 
@@ -438,7 +438,7 @@ ssh-add -l
 ```
 
 ```
-256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA user@davidcosta.dev (ED25519)
+256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA alice@davidcosta.dev (ED25519)
 ```
 
 `-t 8h` sets a lifetime: after eight hours, the key leaves the agent and the passphrase is asked for again.
@@ -462,8 +462,8 @@ ssh -A -p 2222 localhost 'echo $SSH_AUTH_SOCK; ssh-add -l'
 ```
 
 ```
-/home/user/.ssh/agent/s.xxxxxxxxxx.sshd.lBovG9pBll
-256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA user@davidcosta.dev (ED25519)
+/home/alice/.ssh/agent/s.Wq7tP2mZ9d.sshd.lBovG9pBll
+256 SHA256:4+ja/K0i3L7pStIZYZVOnEvEd0YEFPjedY/2GlUWgFA alice@davidcosta.dev (ED25519)
 ```
 
 That socket exists on the server while you're connected. Whoever has root there, or has broken into your account there, can use it to authenticate as you anywhere else that accepts those keys: other servers, GitHub. The `ssh_config` manual is blunt: the attacker doesn't get the key, but can perform operations with it.
@@ -487,10 +487,10 @@ It is also possible that a host key has just been changed.
 The fingerprint for the ED25519 key sent by the remote host is
 SHA256:PMrsD/Gq8l3ING2EDJJkdc4TPnMk29a7hELlNdPDC7o.
 Please contact your system administrator.
-Add correct host key in /home/user/.ssh/known_hosts to get rid of this message.
-Offending ED25519 key in /home/user/.ssh/known_hosts:1
+Add correct host key in /home/alice/.ssh/known_hosts to get rid of this message.
+Offending ED25519 key in /home/alice/.ssh/known_hosts:1
   remove with:
-  ssh-keygen -f '/home/user/.ssh/known_hosts' -R '[localhost]:2222'
+  ssh-keygen -f '/home/alice/.ssh/known_hosts' -R '[localhost]:2222'
 Host key for [localhost]:2222 has changed and you have requested strict checking.
 Host key verification failed.
 ```
@@ -515,7 +515,7 @@ Keys that go into `authorized_keys` tend to stay there forever: the former colle
 `authorized_keys` also accepts per-key restrictions, before the type. A backup key that can only run one command:
 
 ```text
-restrict,command="echo running the backup..." ssh-rsa AAAAB3NzaC1yc2E... user@davidcosta.dev
+restrict,command="echo running the backup..." ssh-rsa AAAAB3NzaC1yc2E... alice@davidcosta.dev
 ```
 
 Even when asked for something else, it only runs the defined command:
@@ -531,19 +531,19 @@ running the backup...
 `restrict` turns off everything that isn't essential (agent, port and X11 forwarding, a terminal), and `command=` pins the command. Another useful restriction is the source, with `from=`:
 
 ```text
-from="10.0.0.0/8" ecdsa-sha2-nistp256 AAAAE2VjZHNh... user@davidcosta.dev
+from="10.0.0.0/8" ecdsa-sha2-nistp256 AAAAE2VjZHNh... alice@davidcosta.dev
 ```
 
 Coming from outside that network, the right key is refused:
 
 ```
-user@localhost: Permission denied (publickey).
+alice@localhost: Permission denied (publickey).
 ```
 
 And the server logs the reason:
 
 ```
-/home/user/.ssh/authorized_keys:4: Authentication tried for user with correct key but not from a permitted host (host=127.0.0.1, ip=127.0.0.1, required=10.0.0.0/8).
+/home/alice/.ssh/authorized_keys:4: Authentication tried for alice with correct key but not from a permitted host (host=127.0.0.1, ip=127.0.0.1, required=10.0.0.0/8).
 ```
 
 ### One key for everything
