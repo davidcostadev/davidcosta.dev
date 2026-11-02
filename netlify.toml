@@ -1,0 +1,7 @@
+# Overrides the build settings in the Netlify UI, which still ran `yarn build`
+[build]
+  command = "pnpm run build"
+
+[build.environment]
+  # Same major as .nvmrc and CI
+  NODE_VERSION = "22"
