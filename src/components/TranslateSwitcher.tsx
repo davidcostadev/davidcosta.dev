@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { IconTranslate } from './icons/IconTranslate';
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
+import { Link, usePathname } from 'i18n/navigation';
 
 export const TranslateSwitcher = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,10 +20,6 @@ export const TranslateSwitcher = () => {
     };
   }, []);
 
-  const getLinkPath = (lang: string) => {
-    return `/${lang}/${pathname.replace(/^\/(en|pt-br)/, '').replace(/^.*(articles(|.*))$/, '$1')}`;
-  };
-
   return (
     <div className="relative" ref={dropdownRef}>
       <button
@@ -42,7 +37,8 @@ export const TranslateSwitcher = () => {
       >
         <li>
           <Link
-            href={getLinkPath('en')}
+            href={pathname}
+            locale="en"
             className=" w-full px-4 py-2 inline-flex hover:bg-gray-100 dark:hover:bg-gray-700  cursor-pointer"
             onClick={() => setIsOpen(false)}
           >
@@ -51,7 +47,8 @@ export const TranslateSwitcher = () => {
         </li>
         <li>
           <Link
-            href={getLinkPath('pt-br')}
+            href={pathname}
+            locale="pt-br"
             className=" w-full px-4 py-2 inline-flex hover:bg-gray-100 dark:hover:bg-gray-700  cursor-pointer"
             onClick={() => setIsOpen(false)}
           >

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from 'i18n/navigation';
 import * as Icon from 'components/icons';
 
 interface Post {
@@ -22,13 +22,12 @@ export const PostWidget = ({ post }: PostWidgetProps) => {
     day: 'numeric',
   });
 
-  const currentLang = post.lang === 'en' ? '' : '/pt-br';
-
   return (
     <li className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:py-8 sm:px-10">
       <h4 className="mb-2">
         <Link
-          href={`${currentLang}/articles/${post.slug}`}
+          href={`/articles/${post.slug}`}
+          locale={post.lang}
           className="text-link-light-normal hover:text-link-light-hover active:text-link-light-active dark:text-link-dark-normal dark:hover:text-link-dark-hover dark:active:text-link-dark-active font-title text-2xl font-bold"
         >
           {post.title}
